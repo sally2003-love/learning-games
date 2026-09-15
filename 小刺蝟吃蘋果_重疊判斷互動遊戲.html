@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小刺蝟吃蘋果－重疊判斷遊戲</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;
+  background:#faf7f0;color:#222
+}
+.wrap{max-width:1180px;margin:auto;padding:18px}
+h1{margin:0 0 6px;font-size:clamp(28px,4vw,46px)}
+.desc{margin:0 0 16px;font-size:17px;line-height:1.6}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+button{
+  min-height:44px;border:0;border-radius:12px;padding:10px 16px;
+  font-size:16px;font-weight:800;cursor:pointer
+}
+.primary{background:#27a866;color:#fff}
+.secondary{background:#2e7edb;color:#fff}
+.muted{background:#777;color:#fff}
+.status{
+  flex:1;min-width:230px;background:#fff;border:1px solid #d8d1c7;
+  border-radius:12px;padding:10px 12px;font-weight:700
+}
+.question{
+  background:#fff;border:1px solid #ddd5ca;border-radius:18px;
+  padding:16px;margin-bottom:16px
+}
+.qhead{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap;margin-bottom:12px
+}
+.qtitle{font-size:21px;font-weight:900}
+.overlapBtn{background:#28a867;color:#fff}
+.row{
+  display:grid;
+  grid-template-columns:minmax(210px,1fr) 56px minmax(210px,1fr) 56px minmax(210px,1fr);
+  align-items:center;gap:10px
+}
+.sign{font-size:42px;font-weight:900;text-align:center;color:#654536}
+.grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border:3px solid #6b4633;background:#fff;aspect-ratio:1/1
+}
+.cell{
+  position:relative;border:1.5px solid #6b4633;
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(28px,5vw,48px);background:#fff;min-width:0
+}
+.result .cell{
+  cursor:pointer;
+  background:#fffdfa;
+}
+.result .cell.selected{background:#e7f6e7}
+.result .cell.selected::after{
+  content:"✓";font-size:clamp(30px,5vw,54px);font-weight:900;color:#59b64b
+}
+.overlayPanel{
+  display:none;margin-top:12px;padding-top:12px;border-top:2px dashed #e6a8a8
+}
+.overlayPanel.show{display:block}
+.overlayWrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.overlayLabel{font-weight:900;font-size:18px}
+.overlayGrid{width:min(280px,100%);position:relative}
+.overlayGrid .cell{background:#fff}
+.overlayGrid .cell.both{background:#eef9e9}
+.overlayGrid .badge{
+  position:absolute;right:4px;top:3px;font-size:18px;color:#4aa13f;font-weight:900
+}
+.hint{font-size:14px;color:#666;margin-top:8px}
+.feedback{font-weight:800;margin-top:10px;min-height:24px}
+@media(max-width:860px){
+  .row{grid-template-columns:1fr}
+  .sign{font-size:30px}
+  .grid{max-width:330px;margin:auto;width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🦔 小刺蝟吃蘋果</h1>
+  <p class="desc">先觀察小刺蝟和蘋果的位置。按下「重疊兩張圖」後，兩張圖會合併顯示；請判斷哪些小刺蝟和蘋果在同一格，並在右側答案格點選 ✓。</p>
+
+  <div class="toolbar">
+    <button id="checkAll" class="primary" type="button">✓ 檢查全部答案</button>
+    <button id="clearAll" class="muted" type="button">清除答案</button>
+    <button id="resetAll" class="secondary" type="button">重新開始</button>
+    <div id="globalStatus" class="status" aria-live="polite">尚未作答</div>
+  </div>
+
+  <div id="questions"></div>
+</div>
+
+<script>
+(() => {
+  const H="🦔", A="🍎";
+
+  // 依原學習單概念配置四題。索引 0~8 對應 3×3。
+  const data=[
+    {h:[0,2,4,7], a:[1,3,4,7,8]},
+    {h:[0,1,4,8], a:[0,4,5,8]},
+    {h:[1,3,5,6,7], a:[1,4,5,6]},
+    {h:[0,3,4,8], a:[0,1,3,5,7]}
+  ];
+
+  const root=document.getElementById("questions");
+  const globalStatus=document.getElementById("globalStatus");
+
+  function answerFor(q){
+    return q.h.filter(i=>q.a.includes(i));
+  }
+
+  function makeGrid(items, symbol, extraClass=""){
+    const g=document.createElement("div");
+    g.className="grid "+extraClass;
+    for(let i=0;i<9;i++){
+      const c=document.createElement("div");
+      c.className="cell";
+      c.dataset.i=i;
+      if(items.includes(i)) c.textContent=symbol;
+      g.appendChild(c);
+    }
+    return g;
+  }
+
+  function buildQuestion(q,idx){
+    const card=document.createElement("section");
+    card.className="question";
+    card.dataset.q=idx;
+
+    const head=document.createElement("div");
+    head.className="qhead";
+    head.innerHTML=`<div class="qtitle">第 ${idx+1} 題</div>`;
+    const ob=document.createElement("button");
+    ob.type="button"; ob.className="overlapBtn"; ob.textContent="重疊兩張圖";
+    head.appendChild(ob);
+    card.appendChild(head);
+
+    const row=document.createElement("div");
+    row.className="row";
+    row.appendChild(makeGrid(q.h,H));
+    const plus=document.createElement("div"); plus.className="sign"; plus.textContent="+";
+    row.appendChild(plus);
+    row.appendChild(makeGrid(q.a,A));
+    const eq=document.createElement("div"); eq.className="sign"; eq.textContent="=";
+    row.appendChild(eq);
+
+    const result=makeGrid([], "", "result");
+    [...result.children].forEach(c=>{
+      c.setAttribute("role","button");
+      c.setAttribute("tabindex","0");
+      const toggle=()=>c.classList.toggle("selected");
+      c.addEventListener("click",toggle);
+      c.addEventListener("keydown",e=>{
+        if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}
+      });
+    });
+    row.appendChild(result);
+    card.appendChild(row);
+
+    const overlay=document.createElement("div");
+    overlay.className="overlayPanel";
+    const wrap=document.createElement("div");
+    wrap.className="overlayWrap";
+    const label=document.createElement("div");
+    label.className="overlayLabel";
+    label.textContent="重疊後：";
+    wrap.appendChild(label);
+
+    const og=document.createElement("div");
+    og.className="grid overlayGrid";
+    const ans=answerFor(q);
+    for(let i=0;i<9;i++){
+      const c=document.createElement("div");
+      c.className="cell";
+      const hasH=q.h.includes(i), hasA=q.a.includes(i);
+      if(hasH && hasA){
+        c.classList.add("both");
+        c.innerHTML=`<span style="font-size:.85em">${H}</span><span style="font-size:.65em;margin-left:-9px;margin-top:18px">${A}</span><span class="badge">✓</span>`;
+      } else if(hasH) c.textContent=H;
+      else if(hasA) c.textContent=A;
+      og.appendChild(c);
+    }
+    wrap.appendChild(og);
+    const note=document.createElement("div");
+    note.innerHTML="<b>提示：</b>同一格同時出現 🦔 與 🍎，就是可以吃到蘋果的位置。";
+    wrap.appendChild(note);
+    overlay.appendChild(wrap);
+    card.appendChild(overlay);
+
+    const fb=document.createElement("div");
+    fb.className="feedback";
+    fb.setAttribute("aria-live","polite");
+    card.appendChild(fb);
+
+    ob.addEventListener("click",()=>{
+      const show=!overlay.classList.contains("show");
+      overlay.classList.toggle("show",show);
+      ob.textContent=show?"收起重疊圖":"重疊兩張圖";
+    });
+
+    return card;
+  }
+
+  data.forEach((q,i)=>root.appendChild(buildQuestion(q,i)));
+
+  function selectedIndexes(card){
+    return [...card.querySelectorAll(".result .cell")]
+      .filter(c=>c.classList.contains("selected"))
+      .map(c=>Number(c.dataset.i))
+      .sort((a,b)=>a-b);
+  }
+
+  function same(a,b){
+    return a.length===b.length && a.every((v,i)=>v===b[i]);
+  }
+
+  document.getElementById("checkAll").addEventListener("click",()=>{
+    let correct=0;
+    [...document.querySelectorAll(".question")].forEach((card,i)=>{
+      const got=selectedIndexes(card);
+      const ans=answerFor(data[i]).sort((a,b)=>a-b);
+      const fb=card.querySelector(".feedback");
+      if(same(got,ans)){
+        correct++;
+        fb.textContent="✅ 答對了！";
+        fb.style.color="#27853e";
+      }else{
+        fb.textContent="❌ 還有位置不對，再觀察一次。";
+        fb.style.color="#c34343";
+      }
+    });
+    globalStatus.textContent=`答對 ${correct} / ${data.length} 題`;
+  });
+
+  document.getElementById("clearAll").addEventListener("click",()=>{
+    document.querySelectorAll(".result .cell.selected").forEach(c=>c.classList.remove("selected"));
+    document.querySelectorAll(".feedback").forEach(f=>f.textContent="");
+    globalStatus.textContent="答案已清除";
+  });
+
+  document.getElementById("resetAll").addEventListener("click",()=>{
+    document.querySelectorAll(".result .cell.selected").forEach(c=>c.classList.remove("selected"));
+    document.querySelectorAll(".feedback").forEach(f=>f.textContent="");
+    document.querySelectorAll(".overlayPanel.show").forEach(p=>p.classList.remove("show"));
+    document.querySelectorAll(".overlapBtn").forEach(b=>b.textContent="重疊兩張圖");
+    globalStatus.textContent="已重新開始";
+    window.scrollTo({top:0,behavior:"smooth"});
+  });
+})();
+</script>
+</body>
+</html>
