@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find the Family! 108課綱閱讀素養與邏輯解謎版</title>
+    <style>
+        :root {
+            --primary-blue: #1e6091;
+            --primary-red: #d90429;
+            --bg-color: #f0f4f8;
+            --room-border: #495057;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none;
+        }
+
+        h1 {
+            color: var(--primary-blue);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #6c757d;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        #game-layout {
+            display: flex;
+            gap: 25px;
+            width: 100%;
+            max-width: 1100px;
+            align-items: flex-start;
+        }
+
+        /* 左側：任務文本（閱讀素養目標區） */
+        .quest-panel {
+            flex: 0.9;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+            border: 4px solid #ffb703;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .quest-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fb8500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quest-text {
+            background-color: #fffdf0;
+            border-left: 5px solid #ffb703;
+            padding: 15px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #333;
+            border-radius: 4px;
+            white-space: pre-line; /* 保留換行 */
+        }
+
+        .target-list {
+            background-color: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #495057;
+        }
+
+        /* 右側：房子配置區 */
+        .house-panel {
+            flex: 1.1;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+            border: 4px solid var(--primary-blue);
+        }
+
+        .house-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 160px);
+            gap: 12px;
+            background-color: #dee2e6;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .room {
+            background-color: #fff;
+            border: 2px solid var(--room-border);
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.2s;
+        }
+
+        .room.drag-over {
+            background-color: #bde0fe !important;
+            border: 2px dashed var(--primary-blue);
+        }
+
+        .room[data-room="bedroom"] { background-color: #fff3cd; }
+        .room[data-room="hallway"] { background-color: #e2e3e5; }
+        .room[data-room="bathroom"] { background-color: #cff4fc; }
+        .room[data-room="livingroom"] { background-color: #d1e7dd; }
+        .room[data-room="stairs"] { background-color: #f8d7da; }
+        .room[data-room="kitchen"] { background-color: #e0cffc; }
+
+        .room-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #495057;
+            background: rgba(255,255,255,0.85);
+            padding: 2px 6px;
+            border-radius: 3px;
+            align-self: flex-start;
+        }
+
+        .room-members {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            flex-grow: 1;
+            align-content: flex-start;
+            min-height: 50px;
+        }
+
+        /* 角色棋子（支援拖曳） */
+        .member-peg {
+            width: 42px;
+            height: 58px;
+            background-color: #f1f3f5;
+            border: 2px solid #cd8719;
+            border-radius: 18px 18px 5px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            background-image: linear-gradient(180deg, #fff 0%, #e9ecef 100%);
+            cursor: grab;
+        }
+        .member-peg:active { cursor: grabbing; }
+
+        .member-peg .peg-label {
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: #333;
+            margin-top: -2px;
+        }
+
+        /* 備用角色池 */
+        .pool-box {
+            background-color: #f8f9fa;
+            border: 2px dashed #ced4da;
+            padding: 12px;
+            border-radius: 8px;
+            min-height: 65px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* 按鈕風格 */
+        .btn {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+            transition: background 0.2s;
+        }
+        .btn-primary { background-color: #2b9348; color: white; }
+        .btn-primary:hover { background-color: #007f5f; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Find the Family!</h1>
+    <div class="subtitle">108課綱閱讀素養與邏輯推理解謎版</div>
+
+    <div id="game-layout">
+        
+        <div class="quest-panel">
+            <div class="quest-header">
+                <span>📖 偵探任務簡報</span>
+                <button class="btn btn-secondary" style="padding: 5px 10px; font-size:0.85rem;" onclick="nextQuest()">下一題</button>
+            </div>
+            
+            <div class="quest-text" id="quest-text-content">載入中...</div>
+
+            <div class="target-list">
+                🎯 <b>素養任務目標：</b><br>
+                請根據上面的情境線索，將下方所有人物<b>拖曳</b>到正確的房間位置！
+            </div>
+        </div>
+
+        <div class="house-panel">
+            <div style="font-weight: bold; margin-bottom: 12px; font-size: 1.1rem; color: var(--primary-blue)">🏠 邏輯配置房屋（請將人物拖曳進房間）</div>
+            
+            <div class="house-grid" id="house-grid">
+                </div>
+
+            <div style="font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; color:#6c757d;">待安置的家族成員：</div>
+            <div class="pool-box" id="member-pool" ondragover="allowDrop(event)" ondrop="dropToPool(event)">
+                </div>
+
+            <div class="action-bar">
+                <button class="btn btn-secondary" onclick="clearCurrentBoard()">重置此題</button>
+                <button class="btn btn-primary" style="font-size: 1.2rem;" onclick="verifyAnswer()">🔍 擺好了，送出案件檢查！</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. 素養導向題庫系統 ---
+        // 設計原則：結合「直接擷取」、「間接推論」與「排他邏輯聯結」
+        const QUEST_DATABASE = [
+            {
+                id: 1,
+                text: "【今日案情：悠閒的週六下午】\n1. 媽媽正在廚房開心地烘烤香噴噴的水果蛋糕。\n2. 爸爸沒有跟媽媽在一起，他正在客廳坐在沙發上看精采的棒球轉播。\n3. 小男生和他的小貓咪感情最好，此時他們兩個正在同一個地方——走廊上玩著小皮球。\n4. 妹妹（小女生）此時正在浴室裡面洗手準備吃點心。",
+                answer: {
+                    kitchen: ['mom'],
+                    livingroom: ['dad'],
+                    hallway: ['boy', 'cat'],
+                    bathroom: ['girl'],
+                    bedroom: [],
+                    stairs: []
+                }
+            },
+            {
+                id: 2,
+                text: "【今日案玩：停電的夜晚】\n1. 家裡突然停電了！爺爺和奶奶年紀大了，決定提早去臥室躺著休息。\n2. 爸爸拿著手電筒，正站在廚房裡幫大家檢查冰箱有沒有關好。\n3. 走廊和樓梯玄關都是空無一人的，因為太暗了很危險。\n4. 媽媽很怕黑，所以狗狗此時忠心地陪在媽媽身邊，他們正一起待在客廳裡取暖。",
+                answer: {
+                    bedroom: ['gpa', 'gma'],
+                    kitchen: ['dad'],
+                    livingroom: ['mom', 'dog'],
+                    hallway: [],
+                    stairs: [],
+                    bathroom: []
+                }
+            },
+            {
+                id: 3,
+                text: "【今日案情：大家在玩躲貓貓】\n1. 狗狗很興奮地在樓梯玄關大聲叫，所以大家都知道狗狗在那裡。\n2. 廚房和浴室這兩個有水的地方，目前都沒有任何人或寵物躲藏。\n3. 奶奶躲在客廳的沙發後面。而爺爺沒有和奶奶躲在同一個房間，爺爺躲在走廊的衣櫃裡。\n4. 爸爸、媽媽、小男生和小女生，四個人此時都擠在二樓的臥室裡面憋著笑。",
+                answer: {
+                    stairs: ['dog'],
+                    kitchen: [],
+                    bathroom: [],
+                    livingroom: ['gma'],
+                    hallway: ['gpa'],
+                    bedroom: ['dad', 'mom', 'boy', 'girl'],
+                    cat: [] // 沒提到的代表不用放，或留在外面
+                }
+            }
+        ];
+
+        const ROOMS = [
+            { id: 'bedroom', name: '🛏️ 臥室' },
+            { id: 'hallway', name: '⏰ 走廊' },
+            { id: 'bathroom', name: '🛁 浴室' },
+            { id: 'livingroom', name: '📺 客廳' },
+            { id: 'stairs', name: '🩼 樓梯玄關' },
+            { id: 'kitchen', name: '🍳 廚房' }
+        ];
+
+        const MEMBERS = [
+            { id: 'gpa', emoji: '🧓', name: '爺爺' },
+            { id: 'gma', emoji: '👵', name: '奶奶' },
+            { id: 'dad', emoji: '👨', name: '爸爸' },
+            { id: 'mom', emoji: '👩', name: '媽媽' },
+            { id: 'boy', emoji: '👦', name: '小男生' },
+            { id: 'girl', emoji: '👧', name: '小女生' },
+            { id: 'dog', emoji: '🐶', name: '狗狗' },
+            { id: 'cat', emoji: '🐱', name: '貓咪' }
+        ];
+
+        let currentQuestIndex = 0;
+        let playerSetup = {}; // 玩家當前的擺放狀態 { room_id: [member_ids] }
+
+        // --- 2. 初始化與渲染 ---
+        function initGame() {
+            loadQuest(currentQuestIndex);
+        }
+
+        function loadQuest(index) {
+            const quest = QUEST_DATABASE[index];
+            document.getElementById('quest-text-content').textContent = quest.text;
+
+            // 初始化玩家擺設數據（全部放空）
+            ROOMS.forEach(r => {
+                playerSetup[r.id] = [];
+            });
+
+            renderHouse();
+            renderPool();
+        }
+
+        function renderHouse() {
+            const grid = document.getElementById('house-grid');
+            grid.innerHTML = '';
+
+            ROOMS.forEach(room => {
+                const roomEl = document.createElement('div');
+                roomEl.className = 'room';
+                roomEl.setAttribute('data-room', room.id);
+                roomEl.innerHTML = `<div class="room-name">${room.name}</div>`;
+
+                const container = document.createElement('div');
+                container.className = 'room-members';
+                container.setAttribute('id', `room-target-${room.id}`);
+                
+                // 拖曳事件處理
+                container.ondragover = (e) => allowDrop(e, roomEl);
+                container.ondragleave = () => roomEl.classList.remove('drag-over');
+                container.ondrop = (e) => dropToRoom(e, room.id, roomEl);
+
+                // 渲染已經放進此房間的角色
+                playerSetup[room.id].forEach(memberId => {
+                    container.appendChild(createDragPeg(memberId));
+                });
+
+                roomEl.appendChild(container);
+                grid.appendChild(roomEl);
+            });
+        }
+
+        function renderPool() {
+            const pool = document.getElementById('member-pool');
+            pool.innerHTML = '';
+
+            // 找出哪些角色還沒被放入任何房間
+            const placedMembers = Object.values(playerSetup).flat();
+            
+            MEMBERS.forEach(m => {
+                if (!placedMembers.includes(m.id)) {
+                    pool.appendChild(createDragPeg(m.id));
+                }
+            });
+        }
+
+        function createDragPeg(memberId) {
+            const m = MEMBERS.find(x => x.id === memberId);
+            const peg = document.createElement('div');
+            peg.className = 'member-peg';
+            peg.setAttribute('draggable', 'true');
+            peg.setAttribute('id', `peg-${memberId}`);
+            peg.innerHTML = `<div>${m.emoji}</div><div class="peg-label">${m.name}</div>`;
+            
+            peg.ondragstart = (e) => {
+                e.dataTransfer.setData("text/plain", memberId);
+            };
+            return peg;
+        }
+
+        // --- 3. HTML5 拖曳邏輯核心 ---
+        function allowDrop(e, roomEl) {
+            e.preventDefault();
+            if (roomEl) roomEl.classList.add('drag-over');
+        }
+
+        function dropToRoom(e, roomId, roomEl) {
+            e.preventDefault();
+            if (roomEl) roomEl.classList.remove('drag-over');
+            
+            const memberId = e.dataTransfer.getData("text/plain");
+            
+            // 從原本舊的地方移除
+            removeFromAll(memberId);
+
+            // 加入新房間
+            playerSetup[roomId].push(memberId);
+
+            renderHouse();
+            renderPool();
+        }
+
+        function dropToPool(e) {
+            e.preventDefault();
+            const memberId = e.dataTransfer.getData("text/plain");
+            removeFromAll(memberId);
+            renderHouse();
+            renderPool();
+        }
+
+        function removeFromAll(memberId) {
+            ROOMS.forEach(r => {
+                const idx = playerSetup[r.id].indexOf(memberId);
+                if (idx > -1) playerSetup[r.id].splice(idx, 1);
+            });
+        }
+
+        function clearCurrentBoard() {
+            loadQuest(currentQuestIndex);
+        }
+
+        function nextQuest() {
+            currentQuestIndex = (currentQuestIndex + 1) % QUEST_DATABASE.length;
+            loadQuest(currentQuestIndex);
+        }
+
+        // --- 4. 閱讀素養邏輯檢驗器 ---
+        function verifyAnswer() {
+            const currentQuest = QUEST_DATABASE[currentQuestIndex];
+            const targetAnswer = currentQuest.answer;
+            let isAllCorrect = true;
+
+            // 比對 6 個房間的組合是否完全相同
+            for (let i = 0; i < ROOMS.length; i++) {
+                const roomId = ROOMS[i].id;
+                const playerRoom = playerSetup[roomId].sort();
+                const targetRoom = (targetAnswer[roomId] || []).sort();
+
+                if (playerRoom.length !== targetRoom.length || !playerRoom.every((val, index) => val === targetRoom[index])) {
+                    isAllCorrect = false;
+                    break;
+                }
+            }
+
+            if (isAllCorrect) {
+                speak("太棒了！你的邏輯推理完全正確，案件成功破解！");
+                alert("🎉 恭喜小偵探！你完全讀懂了線索，推理正確！");
+                nextQuest();
+            } else {
+                speak("哎呀，好像有些人的位置不對喔，再仔細讀一次故事吧！");
+                alert("❌ 噢噢！配置與故事線索不符合。請再重新閱讀一次文章、找出隱藏的邏輯線喔！");
+            }
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>

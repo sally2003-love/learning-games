@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>魔法鎖匠：字母旋轉挑戰</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+            color: #2c3e50;
+            margin: 0;
+        }
+        h1 { margin-bottom: 5px; color: #2c3e50; }
+        .instruction {
+            font-size: 22px;
+            font-weight: bold;
+            color: #e67e22;
+            margin: 15px 0 30px 0;
+            background-color: #fff3e0;
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* 題目區 */
+        .question-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .question-section h3 { margin-top: 0; color: #7f8c8d; }
+
+        /* 4x4 網格系統 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 45px);
+            grid-template-rows: repeat(4, 45px);
+            gap: 2px;
+            background-color: #bdc3c7;
+            padding: 3px;
+            border-radius: 8px;
+        }
+        .cell {
+            width: 45px;
+            height: 45px;
+            background-color: white;
+            border-radius: 4px;
+        }
+        /* 實體方塊顏色 */
+        .cell.filled { background-color: #3498db; }
+
+        /* 選項區 (2x2 排列) */
+        .options-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+        }
+        .option-card {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s, border 0.2s;
+            border: 4px solid transparent;
+        }
+        .option-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        /* 選項內的方塊換個顏色區隔 */
+        .option-card .cell.filled { background-color: #9b59b6; }
+        
+        /* 狀態樣式 */
+        .option-card.correct { border-color: #2ecc71; background-color: #eaafc; }
+        .option-card.wrong { border-color: #e74c3c; opacity: 0.6; pointer-events: none; }
+        
+        /* 鎖定點擊 */
+        .locked { pointer-events: none; }
+
+        /* 回饋訊息與按鈕 */
+        #feedback {
+            margin-top: 25px;
+            font-size: 24px;
+            font-weight: bold;
+            min-height: 35px;
+            text-align: center;
+        }
+        #nextBtn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            display: none; /* 預設隱藏，答對才顯示 */
+            box-shadow: 0 4px 6px rgba(46, 204, 113, 0.3);
+            transition: transform 0.1s;
+        }
+        #nextBtn:active { transform: scale(0.95); }
+
+    </style>
+</head>
+<body>
+
+    <h1>魔法鎖匠：字母旋轉</h1>
+    <div id="instruction" class="instruction">請找出旋轉 90度 後的樣子！</div>
+
+    <div class="game-container">
+        <div class="question-section">
+            <h3>原來的形狀</h3>
+            <div id="questionGrid" class="grid"></div>
+        </div>
+
+        <div id="optionsContainer" class="options-section">
+            </div>
+
+        <div id="feedback"></div>
+        <button id="nextBtn">下一題 ➔</button>
+    </div>
+
+    <script>
+        // 1. 定義 4x4 字母矩陣資料庫
+        const letterBank = {
+            'L': [
+                [1,0,0,0],
+                [1,0,0,0],
+                [1,0,0,0],
+                [1,1,1,1]
+            ],
+            'T': [
+                [1,1,1,1],
+                [0,1,1,0],
+                [0,1,1,0],
+                [0,1,1,0]
+            ],
+            'R': [
+                [1,1,1,0],
+                [1,0,1,0],
+                [1,1,0,0],
+                [1,0,1,0]
+            ],
+            'F': [
+                [1,1,1,1],
+                [1,0,0,0],
+                [1,1,1,0],
+                [1,0,0,0]
+            ],
+            'C': [
+                [0,1,1,1],
+                [1,0,0,0],
+                [1,0,0,0],
+                [0,1,1,1]
+            ]
+        };
+
+        const angles = [90, 180, 360];
+        let currentTargetMatrix = [];
+
+        // 2. 矩陣順時針旋轉 90 度的核心演算法 (適用於任何 N*N)
+        function rotate90(matrix) {
+            const n = matrix.length;
+            let result = Array.from({length: n}, () => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    result[j][n - 1 - i] = matrix[i][j];
+                }
+            }
+            return result;
+        }
+
+        // 根據角度旋轉多次
+        function rotateByAngle(matrix, angle) {
+            let result = matrix;
+            const times = (angle % 360) / 90; 
+            for(let i = 0; i < times; i++) {
+                result = rotate90(result);
+            }
+            return result; // 若為 360 度，times為0，直接回傳原矩陣
+        }
+
+        // 3. 渲染單個網格
+        function createGridElement(matrix) {
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'grid';
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (matrix[r][c] === 1) cell.classList.add('filled');
+                    gridDiv.appendChild(cell);
+                }
+            }
+            return gridDiv;
+        }
+
+        // 4. 遊戲核心邏輯：產生新題目
+        function generateQuestion() {
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            optionsContainer.classList.remove('locked');
+            document.getElementById('feedback').innerText = '';
+            document.getElementById('nextBtn').style.display = 'none';
+
+            const keys = Object.keys(letterBank);
+            const randomLetter = keys[Math.floor(Math.random() * keys.length)];
+            const baseMatrix = letterBank[randomLetter];
+            const targetAngle = angles[Math.floor(Math.random() * angles.length)];
+
+            document.getElementById('instruction').innerText = `👉 請找出旋轉 ${targetAngle}度 後的樣子！`;
+            
+            // ＝＝＝ 新增：讓題目可以被點擊旋轉 ＝＝＝
+            currentQuestionMatrix = baseMatrix; // 記錄題目初始狀態
+            const questionGrid = document.getElementById('questionGrid');
+            questionGrid.innerHTML = '';
+            
+            // 建立題目的 DOM 元素
+            const questionElement = createGridElement(currentQuestionMatrix);
+            questionElement.style.cursor = 'pointer'; // 讓游標變成手指，提示可點擊
+            questionElement.title = "點擊我旋轉看看！";
+            
+            // 綁定點擊事件：每次點擊轉 90 度並重新渲染
+            questionElement.addEventListener('click', function() {
+                currentQuestionMatrix = rotate90(currentQuestionMatrix);
+                questionGrid.innerHTML = '';
+                
+                const newGrid = createGridElement(currentQuestionMatrix);
+                // 必須把事件綁回新的元素上，或者用事件代理
+                newGrid.style.cursor = 'pointer';
+                newGrid.addEventListener('click', arguments.callee); 
+                questionGrid.appendChild(newGrid);
+            });
+            
+            questionGrid.appendChild(questionElement);
+            // ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+            // 計算正確答案
+            currentTargetMatrix = rotateByAngle(baseMatrix, targetAngle);
+
+            let optionsData = [
+                { matrix: baseMatrix, angle: 360 },
+                { matrix: rotateByAngle(baseMatrix, 90), angle: 90 },
+                { matrix: rotateByAngle(baseMatrix, 180), angle: 180 },
+                { matrix: rotateByAngle(baseMatrix, 270), angle: 270 }
+            ];
+
+            for (let i = optionsData.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [optionsData[i], optionsData[j]] = [optionsData[j], optionsData[i]];
+            }
+
+            optionsData.forEach(opt => {
+                const card = document.createElement('div');
+                card.className = 'option-card';
+                card.appendChild(createGridElement(opt.matrix));
+                
+                card.addEventListener('click', function() {
+                    checkAnswer(this, opt.matrix);
+                });
+                optionsContainer.appendChild(card);
+            });
+        }
+        
+        // ... (後面的 checkAnswer 函數保留不變) ...
+
+        // 5. 驗證答案
+        function checkAnswer(cardElement, selectedMatrix) {
+            const feedback = document.getElementById('feedback');
+            const optionsContainer = document.getElementById('optionsContainer');
+            const nextBtn = document.getElementById('nextBtn');
+
+            // 比較所選陣列與目標陣列
+            if (JSON.stringify(selectedMatrix) === JSON.stringify(currentTargetMatrix)) {
+                // 答對
+                cardElement.classList.add('correct');
+                feedback.style.color = '#2ecc71';
+                feedback.innerText = '🎉 答對了！太厲害了！';
+                optionsContainer.classList.add('locked'); // 鎖定其他選項
+                nextBtn.style.display = 'block'; // 顯示下一題按鈕
+            } else {
+                // 答錯
+                cardElement.classList.add('wrong');
+                feedback.style.color = '#e74c3c';
+                feedback.innerText = '❌ 不對喔，再仔細觀察看看！';
+            }
+        }
+
+        // 綁定下一題按鈕
+        document.getElementById('nextBtn').addEventListener('click', generateQuestion);
+
+        // 遊戲啟動：產生第一題
+        generateQuestion();
+    </script>
+</body>
+</html>

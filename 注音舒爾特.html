@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注音符號眼控專注力挑戰</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'Arial', "Microsoft JhengHei", sans-serif;
+            background-color: #E8F5E9; /* 溫和的淡綠色，保護眼睛 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        #hint-box {
+            font-size: 5vh;
+            margin-bottom: 2vh;
+            background: white;
+            padding: 1vh 4vw;
+            border-radius: 30px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            color: #2E7D32;
+        }
+        #next-char { font-weight: bold; color: #C62828; font-size: 7vh; }
+
+        /* 3x3 方格：格子加大、間距加大 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 22vh);
+            grid-template-rows: repeat(3, 22vh);
+            gap: 4vh;
+        }
+
+        /* 眼控按鈕基礎樣式 */
+        .cell {
+            background-color: #FFF9C4;
+            border: 6px solid #FBC02D;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10vh; /* 超大字體 */
+            font-weight: bold;
+            color: #5D4037;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #FBC02D;
+            user-select: none;
+        }
+
+        /* 注視時的集氣進度條效果 */
+        .cell::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background-color: rgba(129, 199, 132, 0.6); /* 綠色集氣條 */
+            transition: height 1.5s linear; /* 1.5秒注視時間 */
+            z-index: 0;
+        }
+        /* 當滑鼠移入（模擬眼控注視）時，開始集氣 */
+        .cell:hover::before {
+            height: 100%;
+        }
+        .cell span {
+            z-index: 1; /* 確保字體在集氣條上方 */
+        }
+
+        /* 答對的樣式 */
+        .cell.correct {
+            background-color: #A5D6A7;
+            border-color: #4CAF50;
+            color: #1B5E20;
+            box-shadow: none;
+            transform: translateY(10px);
+            pointer-events: none;
+        }
+        /* 答對後集氣條填滿 */
+        .cell.correct::before {
+            height: 100% !important;
+            background-color: rgba(76, 175, 80, 0.3);
+        }
+
+        /* 彈出視窗（下一關按鈕） */
+        #next-level-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 5vh 8vw;
+            border-radius: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        /* 超大下一關按鈕，同樣支援注視觸發 */
+        .next-btn {
+            display: inline-block;
+            margin-top: 3vh;
+            padding: 3vh 6vw;
+            font-size: 6vh;
+            background-color: #FF7043;
+            color: white;
+            border: 6px solid #D84315;
+            border-radius: 30px;
+            box-shadow: 0 10px 0 #D84315;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .next-btn::before {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 0%;
+            background-color: rgba(255,255,255,0.4);
+            transition: height 1.5s linear;
+        }
+        .next-btn:hover::before { height: 100%; }
+    </style>
+</head>
+<body>
+
+    <div id="hint-box">請看著：<span id="next-char">ㄅ</span></div>
+    <div class="grid" id="game-grid"></div>
+
+    <div id="next-level-modal">
+        <div class="modal-content">
+            <h2 style="font-size: 6vh; color: #2E7D32; margin: 0;">太棒了！過關了！🎉</h2>
+            <div class="next-btn" id="next-btn"><span>看這裡【下一關】</span></div>
+        </div>
+    </div>
+
+    <script>
+        // 37個注音符號分組（四個關卡）
+        const levels = [
+            ['ㄅ', 'ㄆ', 'ㄇ', 'ㄈ', 'ㄉ', 'ㄊ', 'ㄋ', 'ㄌ', 'ㄍ'], // 第一關 (9)
+            ['ㄎ', 'ㄏ', 'ㄐ', 'ㄑ', 'ㄒ', 'ㄓ', 'ㄔ', 'ㄕ', 'ㄖ'], // 第二關 (9)
+            ['ㄗ', 'ㄘ', 'ㄙ', 'ㄚ', 'ㄛ', 'ㄜ', 'ㄝ', 'ㄞ', 'ㄟ'], // 第三關 (9)
+            ['ㄠ', 'ㄡ', 'ㄢ', 'ㄣ', 'ㄤ', 'ㄥ', 'ㄦ', 'ㄧ', 'ㄨ', 'ㄩ'] // 第四關 (10，其中一關會是3x4或隨機抽9個，這裡程式會自動適應)
+        ];
+
+        let currentLevelIndex = 0;
+        let currentIndex = 0; // 目前關卡進度
+        let dwellTimer = null; // 眼控計時器
+
+        const gridElement = document.getElementById('game-grid');
+        const hintElement = document.getElementById('next-char');
+        const modal = document.getElementById('next-level-modal');
+        const nextBtn = document.getElementById('next-btn');
+
+        // 洗牌演算法
+        function shuffle(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        // 初始化關卡
+        function initLevel(levelIdx) {
+            gridElement.innerHTML = '';
+            currentIndex = 0;
+            modal.style.display = 'none';
+
+            let currentLevelChars = levels[levelIdx];
+            
+            // 如果第四關有10個字，我們只隨機挑9個出來玩，維持3x3畫面
+            if (currentLevelChars.length > 9) {
+                currentLevelChars = shuffle([...currentLevelChars]).slice(0, 9);
+            }
+
+            const shuffledList = shuffle([...currentLevelChars]);
+            // 重新將正確順序設定為該關卡目標
+            const correctOrder = levels[levelIdx].filter(char => currentLevelChars.includes(char));
+
+            hintElement.innerText = correctOrder[0];
+            speak("請找到" + correctOrder[0]);
+
+            // 調整網格大小
+            gridElement.style.gridTemplateColumns = 'repeat(3, 22vh)';
+
+            shuffledList.forEach(char => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.innerHTML = `<span>${char}</span>`;
+                
+                // 【眼控核心】滑鼠移入模擬眼睛注視 (Dwell)
+                cell.addEventListener('mouseenter', () => {
+                    dwellTimer = setTimeout(() => {
+                        // 時間到，觸發選擇
+                        triggerSelect(cell, char, correctOrder);
+                    }, 1500); // 1500毫秒 = 1.5秒
+                });
+
+                // 眼睛中途移開，取消計時
+                cell.addEventListener('mouseleave', () => {
+                    clearTimeout(dwellTimer);
+                });
+
+                gridElement.appendChild(cell);
+            });
+        }
+
+        // 觸發選擇邏輯
+        function triggerSelect(cell, char, correctOrder) {
+            if (char === correctOrder[currentIndex]) {
+                cell.classList.add('correct');
+                currentIndex++;
+                
+                if (currentIndex < correctOrder.length) {
+                    hintElement.innerText = correctOrder[currentIndex];
+                    speak(correctOrder[currentIndex]);
+                } else {
+                    // 關卡完成
+                    showLevelCompleteModal();
+                }
+            } else {
+                // 答錯，格子震動提示（此處簡化為語音提示，不彈出alert打斷眼控）
+                speak("不對唷");
+            }
+        }
+
+        // 顯示過關畫面
+        function showLevelCompleteModal() {
+            modal.style.display = 'flex';
+            speak("太棒了，請看著按鈕進入下一關");
+
+            // 下一關按鈕的眼控辨識
+            nextBtn.addEventListener('mouseenter', startNextLevelTimer);
+            nextBtn.addEventListener('mouseleave', () => clearTimeout(dwellTimer));
+        }
+
+        function startNextLevelTimer() {
+            dwellTimer = setTimeout(() => {
+                currentLevelIndex++;
+                if (currentLevelIndex < levels.length) {
+                    initLevel(currentLevelIndex);
+                } else {
+                    modal.innerHTML = "<div class='modal-content'><h2 style='font-size:6vh; color:#2E7D32;'>🏆 恭喜你完成所有注音符號挑戰！</h2></div>";
+                    speak("恭喜你完成所有挑戰");
+                }
+            }, 1500);
+        }
+
+        // 語音功能
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // 刪除前一個還沒唸完的語音
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 0.7; // 放慢語速
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 啟動第一關
+        setTimeout(() => initLevel(currentLevelIndex), 500);
+
+    </script>
+</body>
+</html>

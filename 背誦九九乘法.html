@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>魔法乘法陣列</title>
+    <style>
+        :root {
+            --bg-color: #fdf6e3;
+            --grid-bg: #ffffff;
+            --cell-border: #e2e8f0;
+            --highlight-color: #a7f3d0; /* 淺綠色預覽 */
+            --correct-color: #34d399; /* 成功綠色 */
+            --wrong-color: #fca5a5; /* 錯誤紅色 */
+            --text-color: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            user-select: none;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #475569;
+            margin-bottom: 5px;
+        }
+
+        .question-box {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #3b82f6;
+            background: white;
+            padding: 15px 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            font-size: 1.2rem;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 30px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 4px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            touch-action: none; /* 防止手機滑動干擾 */
+        }
+
+        .cell {
+            width: 45px;
+            height: 45px;
+            background-color: var(--grid-bg);
+            border: 2px solid var(--cell-border);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.15s, transform 0.1s;
+        }
+
+        /* 滑鼠懸停預覽區域 */
+        .cell.highlight {
+            background-color: var(--highlight-color);
+            border-color: #6ee7b7;
+        }
+
+        /* 答對時的樣式 */
+        .cell.correct {
+            background-color: var(--correct-color);
+            border-color: #059669;
+            animation: pop 0.3s ease-out;
+        }
+
+        /* 點錯時的震動 */
+        .shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .btn {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-top: 30px;
+            display: none; /* 預設隱藏，答對才顯示 */
+            transition: transform 0.1s;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎨 魔法方塊陣列</h1>
+        <div class="question-box" id="question-display">3 × 4 = ?</div>
+        <div class="instruction">請在下方點擊格子，畫出長寬正確的方塊面積！</div>
+    </div>
+
+    <div class="status-bar">
+        <div>目前選取範圍: <span id="current-selection" style="color: #059669;">0 × 0</span></div>
+    </div>
+
+    <div id="grid-container"></div>
+
+    <button class="btn" id="next-btn" onclick="nextQuestion()">✨ 太棒了！下一題 ✨</button>
+
+    <script>
+        const GRID_SIZE = 9; // 9x9 的網格對應九九乘法
+        let targetA, targetB;
+        let isAnimating = false; // 防止答對後繼續觸發滑鼠事件
+
+        const container = document.getElementById('grid-container');
+        const questionDisplay = document.getElementById('question-display');
+        const selectionDisplay = document.getElementById('current-selection');
+        const nextBtn = document.getElementById('next-btn');
+
+        // 初始化網格
+        function initGrid() {
+            container.innerHTML = '';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    
+                    // 綁定滑鼠懸停與點擊事件
+                    cell.addEventListener('mouseover', () => handleHover(r, c));
+                    cell.addEventListener('click', () => handleClick(r, c));
+                    
+                    container.appendChild(cell);
+                }
+            }
+            // 離開網格時清除高亮
+            container.addEventListener('mouseleave', clearHighlight);
+        }
+
+        // 產生新題目
+        function nextQuestion() {
+            isAnimating = false;
+            nextBtn.style.display = 'none';
+            selectionDisplay.innerText = "0 × 0";
+            
+            // 隨機產生 2~9 的乘法
+            targetA = Math.floor(Math.random() * 8) + 2;
+            targetB = Math.floor(Math.random() * 8) + 2;
+            
+            questionDisplay.innerText = `${targetA} × ${targetB} = ?`;
+            questionDisplay.style.color = "#3b82f6";
+            
+            // 重置所有格子
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.className = 'cell';
+                cell.innerText = '';
+            });
+        }
+
+        // 滑鼠懸停處理 (畫出預覽矩形)
+        function handleHover(maxR, maxC) {
+            if (isAnimating) return;
+            
+            const rows = maxR + 1;
+            const cols = maxC + 1;
+            selectionDisplay.innerText = `${rows} × ${cols}`;
+
+            document.querySelectorAll('.cell').forEach(cell => {
+                const r = parseInt(cell.dataset.r);
+                const c = parseInt(cell.dataset.c);
+                if (r <= maxR && c <= maxC) {
+                    cell.classList.add('highlight');
+                } else {
+                    cell.classList.remove('highlight');
+                }
+            });
+        }
+
+        // 清除預覽高亮
+        function clearHighlight() {
+            if (isAnimating) return;
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('highlight');
+            });
+            selectionDisplay.innerText = "0 × 0";
+        }
+
+        // 點擊確認答案
+        function handleClick(maxR, maxC) {
+            if (isAnimating) return;
+
+            const selectedA = maxR + 1;
+            const selectedB = maxC + 1;
+
+            // 檢查是否符合題目 (乘法交換律: A*B 或 B*A 皆可)
+            if ((selectedA === targetA && selectedB === targetB) || 
+                (selectedA === targetB && selectedB === targetA)) {
+                
+                isAnimating = true; // 鎖定畫面
+                const total = targetA * targetB;
+                
+                // 顯示大大的答案
+                questionDisplay.innerText = `${targetA} × ${targetB} = ${total}`;
+                questionDisplay.style.color = "#059669";
+                
+                // 讓選取的格子變成綠色，並顯示數字 1~總和
+                let count = 1;
+                document.querySelectorAll('.cell.highlight').forEach(cell => {
+                    cell.classList.remove('highlight');
+                    cell.classList.add('correct');
+                    // 延遲顯示數字，創造數數的視覺效果
+                    setTimeout(() => {
+                        cell.innerText = count++;
+                    }, count * 30); // 每個格子相隔 30 毫秒出現數字
+                });
+
+                // 顯示下一題按鈕
+                setTimeout(() => {
+                    nextBtn.style.display = 'block';
+                }, total * 30 + 300);
+
+            } else {
+                // 答錯了，整個網格震動
+                container.classList.remove('shake');
+                void container.offsetWidth; // 觸發 reflow 讓動畫可以重播
+                container.classList.add('shake');
+                
+                // 清除高亮重新開始選
+                setTimeout(() => {
+                    if(!isAnimating) clearHighlight();
+                }, 400);
+            }
+        }
+
+        // 啟動遊戲
+        initGrid();
+        nextQuestion();
+
+    </script>
+</body>
+</html>
