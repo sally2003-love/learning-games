@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>我的學習遊戲室</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:"Microsoft JhengHei",Arial,sans-serif;
+  background:#f2f8ff;
+  color:#234;
+}
+
+header{
+  background:linear-gradient(135deg,#6fb7ff,#8fd9c8);
+  color:white;
+  text-align:center;
+  padding:38px 20px;
+}
+
+header h1{
+  margin:0;
+  font-size:42px;
+}
+
+header p{
+  margin-top:12px;
+  font-size:20px;
+}
+
+main{
+  max-width:1200px;
+  margin:30px auto;
+  padding:20px;
+}
+
+h2{
+  font-size:28px;
+  margin-bottom:20px;
+}
+
+.games{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:22px;
+}
+
+.game{
+  background:white;
+  border-radius:22px;
+  padding:25px;
+  box-shadow:0 5px 18px rgba(0,0,0,.10);
+  transition:.2s;
+  border:3px solid transparent;
+}
+
+.game:hover{
+  transform:translateY(-5px);
+  border-color:#80bfff;
+}
+
+.icon{
+  font-size:50px;
+  margin-bottom:10px;
+}
+
+.game h3{
+  font-size:24px;
+  margin:5px 0 12px;
+}
+
+.game p{
+  font-size:17px;
+  line-height:1.6;
+  color:#567;
+  min-height:55px;
+}
+
+.game a{
+  display:block;
+  text-decoration:none;
+  background:#4b9df8;
+  color:white;
+  font-size:20px;
+  font-weight:bold;
+  text-align:center;
+  padding:13px;
+  border-radius:14px;
+  margin-top:15px;
+}
+
+.game a:hover{
+  background:#287edb;
+}
+
+footer{
+  text-align:center;
+  color:#789;
+  padding:30px;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🎮 我的學習遊戲室</h1>
+  <p>視知覺・認知・數學・情緒互動遊戲</p>
+</header>
+
+<main>
+
+<h2>👀 視知覺遊戲</h2>
+
+<div class="games">
+
+<div class="game">
+<div class="icon">🦊</div>
+<h3>森林狐狸找一找</h3>
+<p>練習視覺搜尋、圖地辨識與選擇性注意力。</p>
+<a href="森林狐狸_找一個換一個_單一檔案版.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">🦊</div>
+<h3>森林狐狸隨機找圖</h3>
+<p>找到指定圖案後，再更換下一個搜尋目標。</p>
+<a href="森林狐狸_隨機找圖_找到先打勾再換題.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">🍉</div>
+<h3>西瓜座標拼圖</h3>
+<p>練習空間位置、視覺定位與圖形組合。</p>
+<a href="西瓜座標拼圖_無完整圖版.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">🌸</div>
+<h3>花朵圖形配對</h3>
+<p>從範例圖形中拖曳，完成正確的位置配對。</p>
+<a href="花朵圖形配對_從範例列拖曳.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">🧭</div>
+<h3>座標大風吹</h3>
+<p>練習視覺空間定位、位置對應與拖曳操作。</p>
+<a href="座標大風吹_原始圖拖曳版.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">🧠</div>
+<h3>記憶大考驗</h3>
+<p>練習視覺記憶與工作記憶。</p>
+<a href="記憶大考驗.html">開始遊戲</a>
+</div>
+
+</div>
+
+
+<h2 style="margin-top:45px;">😊 情緒與社會認知</h2>
+
+<div class="games">
+
+<div class="game">
+<div class="icon">😊</div>
+<h3>Feelings 情緒遊戲</h3>
+<p>認識不同表情與情緒詞彙。</p>
+<a href="Feelings情緒互動遊戲_清晰圖片完整版.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">🕵️</div>
+<h3>情緒小偵探</h3>
+<p>透過生活情境判斷人物可能出現的情緒。</p>
+<a href="情緒小偵探_16種情境畫面互動遊戲.html">開始遊戲</a>
+</div>
+
+</div>
+
+
+<h2 style="margin-top:45px;">🧩 認知與其他遊戲</h2>
+
+<div class="games">
+
+<div class="game">
+<div class="icon">🦔</div>
+<h3>小刺蝟吃蘋果</h3>
+<p>利用圖形重疊判斷哪一隻刺蝟可以吃到蘋果。</p>
+<a href="小刺蝟吃蘋果_重疊判斷互動遊戲.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">👀</div>
+<h3>五官遊戲 1</h3>
+<p>五官辨識與視覺認知練習。</p>
+<a href="五官遊戲1.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">👀</div>
+<h3>五官遊戲 2</h3>
+<p>進一步練習五官辨識與配對。</p>
+<a href="五官遊戲2.html">開始遊戲</a>
+</div>
+
+<div class="game">
+<div class="icon">➕</div>
+<h3>百位數加法</h3>
+<p>數學加法互動練習。</p>
+<a href="百位數加法index.html">開始遊戲</a>
+</div>
+
+</div>
+
+</main>
+
+<footer>
+我的學習遊戲室
+</footer>
+
+</body>
+</html>
