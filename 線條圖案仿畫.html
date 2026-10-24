@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>自訂線條圖案｜放大仿畫</title>
+<style>
+:root{--orange:#df642c;--orange-light:#f4d8c6;--dot:#8b999b;--ink:#253b40;--paper:#fffdfa;--line:#24484d;--muted:#65777a}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f4f0;color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif}
+header{padding:18px 22px 12px;background:white;border-bottom:1px solid #eadfd5}
+h1{font-size:clamp(22px,3vw,30px);margin:0 0 5px;color:#17363c}
+header p{margin:0;color:#617276;font-size:14px}
+main{max-width:1300px;margin:auto;padding:18px;display:grid;grid-template-columns:minmax(280px,.85fr) minmax(340px,1.4fr);gap:18px}
+.panel{background:white;border:1px solid #ead9ca;border-radius:18px;padding:16px;min-width:0;box-shadow:0 3px 12px #51351a0a}
+.panel h2{font-size:20px;margin:0 0 12px}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+select,button{font:inherit;border:1px solid #e4cdbb;border-radius:10px;padding:9px 12px;background:#fff;color:var(--ink);cursor:pointer}
+button.primary{background:var(--orange);border-color:var(--orange);color:white}
+button.active{background:#fbe8dd;border-color:var(--orange);color:#a8441c}
+button:focus-visible,select:focus-visible{outline:3px solid #f4b38f;outline-offset:2px}
+.hint{font-size:13px;color:var(--muted);line-height:1.6;margin:6px 0 12px}
+.canvas-wrap{border:1.5px solid var(--orange-light);border-radius:16px;padding:8px;background:#fffefa;max-width:100%;margin:auto}
+svg{display:block;width:100%;height:auto;touch-action:manipulation;user-select:none}
+.node{cursor:pointer;outline:none}
+.node circle{fill:var(--dot);transition:fill .12s}
+.node:hover circle{fill:var(--orange)}
+.node:focus circle{stroke:var(--orange);stroke-width:3}
+.node.selected circle{fill:var(--orange)}
+.drawn-line{stroke:var(--line);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;fill:none;pointer-events:none}
+.student-line{stroke:#24484d;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;fill:none;pointer-events:none}
+.small-label{font-size:12px;color:#8b5b43;margin:0 0 6px}
+.status{font-size:13px;min-height:22px;color:#52666a;margin-top:10px}
+.student-panel{display:flex;flex-direction:column}
+.student-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.student-head .controls{margin-bottom:8px}
+.student-board{width:min(100%,760px);margin:0 auto}
+.stats{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px;color:#65777a;margin-top:10px}
+.footer-note{max-width:1300px;margin:0 auto;padding:0 18px 22px;color:#6b7778;font-size:12px}
+@media(max-width:800px){main{grid-template-columns:1fr;padding:12px}.panel{padding:13px}header{padding:15px}.student-board{width:100%}}
+@media print{body{background:white}header,.creator-panel,.student-controls,.footer-note{display:none!important}main{display:block;padding:0}.panel{border:0;box-shadow:none}.student-panel{display:block}}
+</style>
+</head>
+<body>
+<header>
+  <h1>自訂線條圖案｜放大仿畫</h1>
+  <p>老師先在小點陣設計圖案，再讓學生在大點陣上逐點仿畫。可用滑鼠或觸控操作。</p>
+</header>
+<main>
+  <section class="panel creator-panel">
+    <h2>① 老師設計圖案</h2>
+    <div class="controls">
+      <label for="gridSize">點陣大小</label>
+      <select id="gridSize">
+        <option value="3">3 × 3</option><option value="4">4 × 4</option>
+        <option value="5" selected>5 × 5</option><option value="6">6 × 6</option>
+        <option value="7">7 × 7</option>
+      </select>
+      <button id="undoBtn">復原一步</button>
+      <button id="clearBtn">清除圖案</button>
+    </div>
+    <p class="hint">操作方式：每一條線都獨立畫。先點起點，再點終點，就完成一條線；接著再選下一條線。交叉、重疊或共用端點都不會自動接成錯誤路徑。</p>
+    <div class="small-label">設計區（小圖）</div>
+    <div class="canvas-wrap" style="max-width:460px">
+      <svg id="designSvg" viewBox="0 0 360 360" role="img" aria-label="老師設計圖案區"></svg>
+    </div>
+    <div class="status" id="designStatus">已選取 5 × 5 點陣。點選圓點開始設計。</div>
+    <div class="controls">
+      <button id="newStrokeBtn">取消起點</button>
+      <button id="copyBtn" class="primary">完成圖案／更新右側</button>
+    </div>
+  </section>
+
+  <section class="panel student-panel">
+    <div class="student-head">
+      <div>
+        <h2>② 學生放大仿畫</h2>
+        <p class="hint">看著左側範例，每條線分別點一次起點、一次終點。線條交叉或共用端點時，請把每一段線分開畫。</p>
+      </div>
+      <div class="controls student-controls">
+        <button id="showModelBtn" class="active">顯示範例</button>
+        <button id="hideModelBtn">隱藏範例</button>
+        <button id="studentUndoBtn">復原一步</button>
+        <button id="studentClearBtn">重做</button>
+      </div>
+    </div>
+    <div class="student-board">
+      <div class="small-label">仿畫區（大圖）</div>
+      <div class="canvas-wrap">
+        <svg id="studentSvg" viewBox="0 0 600 600" role="img" aria-label="學生放大仿畫區"></svg>
+      </div>
+    </div>
+    <div class="stats">
+      <span id="progress">已連線 0 段</span>
+      <span id="feedback">先觀察圖案從哪裡開始、線往哪個方向走。</span>
+    </div>
+  </section>
+</main>
+<div class="footer-note">提示：可先從 3×3、少量水平／垂直線開始，再加入斜線、轉折、交叉線與較長的線段。網頁不會自動替學生畫線。</div>
+<script>
+const designSvg=document.getElementById('designSvg'), studentSvg=document.getElementById('studentSvg');
+const sizeSelect=document.getElementById('gridSize');
+let n=5, designSegments=[], designStart=null, studentSegments=[], studentStart=null;
+let showModel=true, modelSegments=[];
+const NS='http://www.w3.org/2000/svg';
+function xy(index, count, view, margin){const r=Math.floor(index/count),c=index%count;return {x:margin+c*(view-2*margin)/(count-1),y:margin+r*(view-2*margin)/(count-1)}}
+function polyline(points, cls, count, view, margin){
+ if(points.length<2)return null;
+ const p=document.createElementNS(NS,'polyline');
+ p.setAttribute('points',points.map(i=>{let q=xy(i,count,view,margin);return `${q.x},${q.y}`}).join(' '));
+ p.setAttribute('class',cls);return p;
+}
+function drawBoard(svg, count, view, margin, segments, start, clickFn, opts={}){
+ svg.innerHTML='';
+ segments.forEach(s=>{const p=polyline(s,opts.lineClass||'drawn-line',count,view,margin);if(p)svg.appendChild(p)});
+ if(opts.model && showModel){
+   modelSegments.forEach(s=>{const p=polyline(s,opts.modelClass||'drawn-line',count,view,margin);if(p){p.setAttribute('opacity','.32');p.setAttribute('stroke-dasharray','7 5');svg.appendChild(p)}});
+ }
+ for(let i=0;i<count*count;i++){
+  const q=xy(i,count,view,margin),g=document.createElementNS(NS,'g');
+  g.setAttribute('class','node'+(start===i?' selected':''));
+  g.setAttribute('tabindex','0');g.setAttribute('role','button');g.setAttribute('aria-label',`第${Math.floor(i/count)+1}列第${i%count+1}行的點`);
+  const c=document.createElementNS(NS,'circle');c.setAttribute('cx',q.x);c.setAttribute('cy',q.y);c.setAttribute('r',opts.radius||7);g.appendChild(c);
+  g.addEventListener('click',()=>clickFn(i));
+  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();clickFn(i)}});
+  svg.appendChild(g);
+ }
+}
+function refreshDesign(){
+ drawBoard(designSvg,n,360,40,designSegments,designStart,addDesignPoint,{radius:7,lineClass:'drawn-line'});
+ document.getElementById('designStatus').textContent=`已完成 ${designSegments.length} 條獨立線段${designStart!==null?'；已選起點，請再選終點。':'；點選起點，再點選終點即可新增線段。'}`;
+}
+function addDesignPoint(i){
+ if(designStart===null){designStart=i;refreshDesign();return}
+ if(designStart===i){designStart=null;refreshDesign();return}
+ designSegments.push([designStart,i]);designStart=null;refreshDesign();
+}
+function refreshStudent(){
+ drawBoard(studentSvg,n,600,55,studentSegments,studentStart,addStudentPoint,{radius:8,lineClass:'student-line',model:true,modelClass:'drawn-line'});
+ document.getElementById('progress').textContent=`已完成 ${studentSegments.length} 條線段${studentStart!==null?'（已選起點）':''}`;
+ document.getElementById('feedback').textContent=showModel?'每次只畫一條線：先找起點，再找終點。共用端點不代表要把線連成同一路徑。':'範例已隱藏；請逐條重建線段，留意交叉與共用端點。';
+}
+function addStudentPoint(i){
+ if(studentStart===null){studentStart=i;refreshStudent();return}
+ if(studentStart===i){studentStart=null;refreshStudent();return}
+ studentSegments.push([studentStart,i]);studentStart=null;refreshStudent();
+}
+function resetAll(newN=n){
+ n=newN;designSegments=[];designStart=null;studentSegments=[];studentStart=null;modelSegments=[];showModel=true;
+ document.getElementById('showModelBtn').classList.add('active');document.getElementById('hideModelBtn').classList.remove('active');
+ refreshDesign();refreshStudent();
+}
+sizeSelect.addEventListener('change',()=>resetAll(Number(sizeSelect.value)));
+document.getElementById('undoBtn').addEventListener('click',()=>{
+ if(designStart!==null)designStart=null;else designSegments.pop();
+ refreshDesign();
+});
+document.getElementById('clearBtn').addEventListener('click',()=>{designSegments=[];designStart=null;modelSegments=[];studentSegments=[];studentStart=null;refreshDesign();refreshStudent()});
+document.getElementById('newStrokeBtn').addEventListener('click',()=>{designStart=null;refreshDesign()});
+document.getElementById('copyBtn').addEventListener('click',()=>{
+ designStart=null;modelSegments=designSegments.map(s=>s.slice());studentSegments=[];studentStart=null;showModel=true;
+ document.getElementById('showModelBtn').classList.add('active');document.getElementById('hideModelBtn').classList.remove('active');
+ refreshDesign();refreshStudent();
+});
+document.getElementById('showModelBtn').addEventListener('click',()=>{showModel=true;document.getElementById('showModelBtn').classList.add('active');document.getElementById('hideModelBtn').classList.remove('active');refreshStudent()});
+document.getElementById('hideModelBtn').addEventListener('click',()=>{showModel=false;document.getElementById('hideModelBtn').classList.add('active');document.getElementById('showModelBtn').classList.remove('active');refreshStudent()});
+document.getElementById('studentUndoBtn').addEventListener('click',()=>{if(studentStart!==null)studentStart=null;else studentSegments.pop();refreshStudent()});
+document.getElementById('studentClearBtn').addEventListener('click',()=>{studentStart=null;studentSegments=[];refreshStudent()});
+resetAll(5);
+</script>
+</body>
+</html>

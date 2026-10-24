@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>積木圖案拼搭互動練習</title>
+<style>
+:root{--ink:#153b46;--teal:#087f8c;--orange:#f15a2a;--paper:#fffaf1;--line:#d9e2df;--red:#e84335;--yellow:#f7ca32;--green:#39a65a;--blue:#3988d8;--pink:#ed78b4}
+*{box-sizing:border-box}body{margin:0;background:#f2f7f8;color:var(--ink);font-family:system-ui,-apple-system,"Microsoft JhengHei",sans-serif}
+header{padding:18px 22px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:clamp(21px,3vw,30px);margin:0}header p{margin:5px 0 0;color:#557078}
+main{max-width:1250px;margin:auto;padding:18px;display:grid;grid-template-columns:270px 1fr;gap:18px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 4px 14px #163b4610}
+h2{font-size:18px;margin:0 0 12px}.small{font-size:13px;color:#61777d;line-height:1.55}
+.patterns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pattern{border:2px solid #e6e2d8;border-radius:12px;background:#fffaf4;padding:8px 3px;cursor:pointer;color:var(--ink);font-weight:700}
+.pattern.active{border-color:var(--orange);box-shadow:0 0 0 2px #f15a2a22}
+.mini{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;width:54px;height:48px;margin:0 auto 5px}
+.mini span{border-radius:2px;background:#edf0ec}.pattern-name{font-size:12px}
+label{display:block;font-weight:700;margin:15px 0 7px}
+select,button{font:inherit}
+select{width:100%;padding:10px;border:1px solid #cbd8d8;border-radius:10px;background:#fff;color:var(--ink)}
+button{border:0;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer}
+button:focus-visible,.pattern:focus-visible{outline:3px solid #ffb52e;outline-offset:2px}
+.primary{background:var(--orange);color:white}.secondary{background:#e8f4f4;color:var(--ink)}.outline{background:#fff;border:1px solid #b9cccf;color:var(--ink)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.work{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.board-card{background:#e5f2fb;border-radius:20px;padding:16px;min-width:0}
+.board-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;font-weight:800}
+.board{display:grid;grid-template-columns:repeat(11,minmax(16px,1fr));gap:4px;background:#d0d6d2;border:2px solid #858e89;border-radius:12px;padding:8px;aspect-ratio:1/1;width:100%;max-width:520px;margin:auto}
+.cell{border:1.5px solid #929b96;border-radius:50%;background:#e7eae5;aspect-ratio:1;min-width:0;padding:0;position:relative}
+.cell.filled{border-radius:4px;border:1.5px solid #9c3027;box-shadow:inset 0 1px #ffffff55}
+.cell.filled:after{content:"";position:absolute;inset:18%;border:1.5px solid #9c3027;border-radius:50%;background:#ffffff08}
+.cell.target{opacity:.45}
+.cell.wrong{outline:3px solid #ffb52e}
+.cell:disabled{cursor:default}
+.legend{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;font-size:13px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+.palette{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.color{width:43px;height:43px;border:3px solid #fff;box-shadow:0 0 0 1px #b8c6c7;border-radius:10px;padding:0}
+.color.active{box-shadow:0 0 0 3px var(--ink)}
+.status{background:#fff;border:1px solid var(--line);padding:12px;border-radius:12px;margin-top:12px;line-height:1.5}
+.progress{height:10px;background:#dce7e8;border-radius:99px;overflow:hidden;margin:10px 0}.progress span{display:block;height:100%;background:var(--teal);width:0;transition:width .2s}
+.task-list{display:grid;gap:10px}.task{padding:10px;border-radius:12px;background:#f6faf9;border:1px solid #e0e9e8}
+.task strong{display:block;margin-bottom:3px}
+@media(max-width:850px){main{grid-template-columns:1fr}.work{grid-template-columns:1fr}.board{max-width:440px}}
+</style>
+</head>
+<body>
+<header>
+ <div><h1>積木圖案拼搭練習</h1><p>看圖找位置、安排拼搭順序，再自己完成圖案。</p></div>
+ <div class="controls" style="margin:0"><button class="secondary" id="modeCopy">自己拼圖</button><button class="secondary" id="modeSteps">步驟提示</button></div>
+</header>
+<main>
+ <aside class="panel">
+  <h2>① 選擇圖案</h2>
+  <div class="patterns" id="patterns"></div>
+  <label for="gridSize">棋盤大小</label>
+  <select id="gridSize"><option value="7">小棋盤（7 × 7）</option><option value="9">中棋盤（9 × 9）</option><option value="11" selected>大棋盤（11 × 11）</option></select>
+  <label for="difficulty">練習方式</label>
+  <select id="difficulty"><option value="copy">看範例自己拼</option><option value="steps">逐步提示</option><option value="memory">看圖後隱藏範例</option></select>
+  <div class="controls"><button class="primary" id="startBtn" style="width:100%">開始練習</button></div>
+  <p class="small">操作：先選顏色，再點右側棋盤的圓點放上積木；再次點同一格可清除。完成後按「檢查答案」。</p>
+  <div class="status"><strong>本題目標</strong><div id="goalText">完成愛心圖案</div><div class="progress"><span id="progressBar"></span></div><div id="progressText" class="small">已完成 0 格</div></div>
+ </aside>
+ <section class="work">
+  <div class="board-card">
+   <div class="board-title"><span>② 範例圖案</span><span id="targetLabel">愛心</span></div>
+   <div class="board" id="targetBoard" aria-label="範例圖案"></div>
+   <div class="legend"><span><i class="dot" style="background:#e84335"></i>紅色積木</span><span class="small">觀察上下、左右與空格的位置</span></div>
+   <div class="controls"><button class="outline" id="hideBtn">隱藏範例</button><button class="outline" id="showBtn">顯示範例</button></div>
+  </div>
+  <div class="board-card">
+   <div class="board-title"><span>③ 學生拼搭區</span><span id="countLabel">0 格</span></div>
+   <div id="palette" class="palette" aria-label="選擇積木顏色"></div>
+   <div class="board" id="buildBoard" aria-label="學生拼搭棋盤"></div>
+   <div class="controls">
+    <button class="secondary" id="undoBtn">復原一步</button><button class="outline" id="clearBtn">全部清除</button><button class="primary" id="checkBtn">檢查答案</button>
+   </div>
+   <div class="status" id="feedback" aria-live="polite">準備好了嗎？先觀察範例圖案，再開始拼搭。</div>
+  </div>
+  <div class="panel" style="grid-column:1/-1">
+   <h2>④ 拼搭步驟提示</h2>
+   <div class="task-list">
+    <div class="task"><strong>步驟 1：先找整體方向</strong><span class="small">辨認圖案的上方、下方、左側與右側，不急著放積木。</span></div>
+    <div class="task"><strong>步驟 2：找最明顯的區塊</strong><span class="small">先完成最上方或最外側的區塊，再補中間的小區塊。</span></div>
+    <div class="task"><strong>步驟 3：逐格檢查</strong><span class="small">檢查有沒有漏格、多放，並比較每一列的左右位置。</span></div>
+   </div>
+   <div class="controls"><button class="secondary" id="hintBtn">顯示提示</button><span id="hint" class="small" style="align-self:center"></span></div>
+  </div>
+ </section>
+</main>
+<script>
+const COLORS={red:"#e84335",yellow:"#f7ca32",green:"#39a65a",blue:"#3988d8",pink:"#ed78b4"};
+const designs=[
+ {id:"heart",name:"愛心",color:"red",rows:["00111001100","01111111110","11111111111","11111111111","01111111110","00111111100","00011111000","00001110000","00000100000"]},
+ {id:"smile",name:"笑臉",color:"yellow",rows:["001111100","011111110","111111111","110010011","110010011","111000111","110111011","011111110","001111100"]},
+ {id:"tree",name:"大樹",color:"green",rows:["000010000","000111000","001111100","011111110","111111111","001111100","000111000","000010000","000111000"]},
+ {id:"fish",name:"小魚",color:"blue",rows:["000110000","001111100","111111110","111111111","111111110","001111100","000110000"]},
+ {id:"house",name:"房子",color:"red",rows:["000011100","000111110","001111111","011111111","111111111","110001011","110001011","111111111","111111111"]},
+ {id:"flower",name:"小花",color:"pink",rows:["000010000","001111100","011111110","001111100","000010000","000111000","000111000","000111000","001111100"]}
+];
+let selected=designs[0],size=11,paint="red",userGrid=[],history=[],hidden=false,stepMode=false;
+const $=id=>document.getElementById(id);
+function normalizeRows(d,n){let rows=d.rows.map(r=>r.split(""));let out=Array.from({length:n},()=>Array(n).fill(""));let maxW=Math.max(...rows.map(r=>r.length));let scale=Math.min((n-2)/rows.length,(n-2)/maxW);let h=Math.max(1,Math.round(rows.length*scale)),w=Math.max(1,Math.round(maxW*scale));for(let y=0;y<h;y++)for(let x=0;x<w;x++){let sy=Math.min(rows.length-1,Math.floor(y/scale)),sx=Math.min(maxW-1,Math.floor(x/scale));if(rows[sy][sx]==="1")out[Math.floor((n-h)/2)+y][Math.floor((n-w)/2)+x]=d.color;}return out}
+function target(){return normalizeRows(selected,size)}
+function renderPatterns(){let host=$("patterns");host.innerHTML="";designs.forEach(d=>{let b=document.createElement("button");b.className="pattern"+(d.id===selected.id?" active":"");b.innerHTML=`<div class="mini">${d.rows.slice(0,7).map(r=>r.slice(0,7).split("").map(v=>`<span style="background:${v==="1"?COLORS[d.color]:"#edf0ec"}"></span>`).join("")).join("")}</div><div class="pattern-name">${d.name}</div>`;b.onclick=()=>{selected=d;renderPatterns();renderAll();};host.appendChild(b)})}
+function renderBoard(hostId,grid,isTarget=false){let host=$(hostId);host.innerHTML="";host.style.gridTemplateColumns=`repeat(${size},minmax(0,1fr))`;grid.forEach((row,y)=>row.forEach((v,x)=>{let b=document.createElement("button");b.className="cell"+(v?" filled":"")+(isTarget&&hidden?" target":"");b.style.background=v?(COLORS[v]||v):"";b.setAttribute("aria-label",`${y+1}列 ${x+1}格${v?" 已放積木":" 空格"}`);if(isTarget){b.disabled=true;if(hidden)b.style.visibility="hidden";}else{b.onclick=()=>{history.push(userGrid.map(r=>r.slice()));userGrid[y][x]=userGrid[y][x]===paint?"":paint;renderBuild();};}host.appendChild(b)}))}
+function renderBuild(){renderBoard("buildBoard",userGrid);let count=userGrid.flat().filter(Boolean).length;$("countLabel").textContent=count+" 格";let goal=target().flat().filter(Boolean).length;$("progressBar").style.width=(Math.min(100,count/Math.max(goal,1)*100))+"%";$("progressText").textContent=`已放置 ${count} 格（範例約 ${goal} 格）`;}
+function renderPalette(){let p=$("palette");p.innerHTML="";Object.entries(COLORS).forEach(([name,color])=>{let b=document.createElement("button");b.className="color"+(paint===name?" active":"");b.style.background=color;b.title=name;b.setAttribute("aria-label",name+"積木");b.onclick=()=>{paint=name;renderPalette()};p.appendChild(b)})}
+function renderAll(){size=+$("gridSize").value;userGrid=Array.from({length:size},()=>Array(size).fill(""));history=[];hidden=false;$("targetLabel").textContent=selected.name;$("goalText").textContent="完成「"+selected.name+"」圖案";$("feedback").textContent="先觀察範例圖案，再從明顯的區塊開始拼搭。";$("hint").textContent="";$("targetBoard").style.visibility="visible";renderBoard("targetBoard",target(),true);renderPalette();renderBuild()}
+$("gridSize").onchange=renderAll;
+$("startBtn").onclick=()=>{renderAll();$("feedback").textContent="新的一題開始！先確認圖案的上下左右，再開始放積木。"};
+$("modeCopy").onclick=()=>{$("difficulty").value="copy";stepMode=false;$("feedback").textContent="自己拼圖模式：依照左側範例完成右側棋盤。"};
+$("modeSteps").onclick=()=>{$("difficulty").value="steps";stepMode=true;$("feedback").textContent="步驟提示模式：先拼上方區塊，再往下完成。";};
+$("hideBtn").onclick=()=>{hidden=true;renderBoard("targetBoard",target(),true)};
+$("showBtn").onclick=()=>{hidden=false;renderBoard("targetBoard",target(),true)};
+$("clearBtn").onclick=()=>{history.push(userGrid.map(r=>r.slice()));userGrid=Array.from({length:size},()=>Array(size).fill(""));renderBuild();$("feedback").textContent="已清除，可以重新開始。"};
+$("undoBtn").onclick=()=>{if(history.length)userGrid=history.pop();renderBuild()};
+$("checkBtn").onclick=()=>{let t=target(),right=0,wrong=0,miss=0;for(let y=0;y<size;y++)for(let x=0;x<size;x++){if(t[y][x]&&userGrid[y][x]===t[y][x])right++;else if(userGrid[y][x]&&!t[y][x])wrong++;else if(t[y][x]&&!userGrid[y][x])miss++;}let total=t.flat().filter(Boolean).length;if(right===total&&wrong===0&&miss===0){$("feedback").textContent="太棒了！圖案完全正確，你有仔細觀察位置與方向。";}else{$("feedback").textContent=`再檢查一下：正確 ${right} 格；還有 ${miss} 格需要補上，${wrong} 格可能多放或顏色不對。試著一列一列比對。`;}};
+$("hintBtn").onclick=()=>{$("hint").textContent="提示：先看最上面一列有幾格，再找圖案中線；每完成一列，就從左到右逐格檢查。"};
+$("difficulty").onchange=()=>{if($("difficulty").value==="memory"){hidden=true;renderBoard("targetBoard",target(),true);$("feedback").textContent="記憶挑戰：範例已隱藏，試著回想圖案位置；需要時可按「顯示範例」。"}else if($("difficulty").value==="steps"){stepMode=true;$("feedback").textContent="逐步提示：從上方區塊開始，完成後再往下。"}else{stepMode=false;$("feedback").textContent="自己拼圖：依照範例完成棋盤。"}};
+renderPatterns();renderAll();
+</script>
+</body>
+</html>
