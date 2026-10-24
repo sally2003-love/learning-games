@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>箭頭拼圖研究所｜視覺空間與執行功能訓練</title>
+<style>
+:root{--tile:68px;--gap:5px;--fontScale:1;--blue:#1478d4;--yellow:#ffdf58;--ink:#18334d;--soft:#eef6fc}
+*{box-sizing:border-box}
+body{margin:0;background:#f3f7fb;color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;font-size:calc(16px * var(--fontScale))}
+header{background:linear-gradient(120deg,#123e70,#176db4);color:#fff;padding:22px 18px}
+.wrap{max-width:1250px;margin:auto;padding:0 14px}
+h1{margin:0 0 6px;font-size:clamp(25px,4vw,36px)}
+header p{margin:0;opacity:.94}
+main{max-width:1250px;margin:18px auto;padding:0 14px 34px}
+.panel{background:white;border:1px solid #dbe6f0;border-radius:18px;padding:16px;margin-bottom:15px;box-shadow:0 4px 15px #153e6410}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.field{display:flex;flex-direction:column;gap:5px;min-width:150px}
+label{font-weight:700;font-size:.93em}
+select,button{font:inherit}
+select{border:1px solid #b7c9d9;border-radius:10px;padding:10px 12px;background:white;color:var(--ink);min-height:44px}
+button{border:0;border-radius:11px;padding:10px 14px;min-height:44px;font-weight:700;cursor:pointer;transition:transform .08s,filter .15s}
+button:active{transform:scale(.98)}
+.primary{background:#176db4;color:#fff}.secondary{background:#e7f1fa;color:#16466f;border:1px solid #c6dcee}.warm{background:#ffdf58;color:#493b00}.danger{background:#ffeded;color:#9b2f2f;border:1px solid #f3caca}
+button:focus-visible,select:focus-visible,.tile:focus-visible{outline:3px solid #ff9c36;outline-offset:2px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.chip{background:#edf5fc;color:#20567f;border-radius:999px;padding:6px 10px;font-size:.84em;font-weight:700}
+.statusline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.status{font-weight:700;color:#155c94}
+.small{font-size:.9em;color:#557087}
+.playarea{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.2fr);gap:16px;align-items:start}
+h2{font-size:1.2em;margin:0 0 10px}
+h3{font-size:1.05em;margin:0 0 8px}
+.board-wrap{overflow:auto;padding:5px 2px 12px}
+.board{display:grid;gap:var(--gap);justify-content:center;align-content:start;margin:8px auto;min-height:100px}
+.cell{width:var(--tile);height:var(--tile);border-radius:10px;border:2px dashed #c2d4e2;background:#f6f9fc;display:flex;align-items:center;justify-content:center;position:relative}
+.cell.filled{border-style:solid;border-color:#d3b634;background:#fff6bd}
+.cell.correct{border-color:#259b63;box-shadow:inset 0 0 0 2px #c4f0d9}
+.cell.wrong{border-color:#df4d4d;background:#fff0f0;box-shadow:inset 0 0 0 2px #ffd0d0}
+.cell .coord{position:absolute;bottom:1px;right:4px;font-size:10px;color:#8ca0b0;pointer-events:none}
+.tile{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--yellow);color:var(--blue);border:2px solid #e7c739;border-radius:8px;font-size:calc(40px * var(--fontScale));font-weight:900;line-height:1;user-select:none;padding:0;touch-action:manipulation}
+.tile.double{font-size:calc(37px * var(--fontScale))}
+.tile.selected{outline:4px solid #f28b27;outline-offset:1px;z-index:2}
+.tile.banktile{width:var(--tile);height:var(--tile);flex:0 0 var(--tile)}
+.tile:disabled{opacity:1}
+.bank{display:flex;flex-wrap:wrap;gap:9px;min-height:80px;padding:10px;border:2px dashed #c8d9e8;border-radius:14px;background:#f8fbfe}
+.bank.empty{align-items:center;justify-content:center;color:#8095a8}
+.modelgrid{display:grid;gap:3px;justify-content:center;margin:8px auto}
+.modelcell{width:clamp(32px,4.6vw,47px);height:clamp(32px,4.6vw,47px);display:flex;align-items:center;justify-content:center;background:var(--yellow);color:var(--blue);border:1px solid #e7c739;border-radius:4px;font-size:clamp(20px,2.7vw,30px);font-weight:900;line-height:1}
+.modelcell.blank{background:#f1f5f8;border:1px dashed #d4e0e9;color:transparent}
+.instruction{background:#fff9df;border:1px solid #f1df8e;border-radius:12px;padding:10px 12px;margin:10px 0;color:#5d4d08}
+.feedback{padding:12px;border-radius:12px;margin-top:12px;display:none;line-height:1.55}
+.feedback.show{display:block}.feedback.good{background:#e8f8ef;border:1px solid #a8e1bf;color:#17633b}.feedback.warn{background:#fff4e5;border:1px solid #f2d09a;color:#77500c}.feedback.bad{background:#fff0f0;border:1px solid #f1b6b6;color:#8c2828}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.progress{height:8px;background:#e8eff5;border-radius:99px;overflow:hidden;margin-top:9px}.progress span{height:100%;display:block;background:#219a67;width:0;transition:width .2s}
+.skills{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.skill{background:#f4f8fc;border-radius:12px;padding:10px}.skill b{display:block;font-size:.93em}.skill span{font-size:.82em;color:#5a7388}
+.hidden{display:none!important}
+@media(max-width:850px){.playarea{grid-template-columns:1fr}.skills{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:430px){:root{--tile:56px;--gap:4px}.panel{padding:12px}.field{min-width:130px;flex:1}.skills{grid-template-columns:1fr 1fr}.tile{font-size:calc(34px * var(--fontScale))}.tile.double{font-size:calc(31px * var(--fontScale))}}
+@media print{header,.controls,.actions,.chips{display:none}.panel{box-shadow:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>🧩 箭頭拼圖研究所</h1>
+<p>看圖拼排・記憶提取・空間旋轉・找錯修正｜視覺空間 × 工作記憶 × 執行功能</p>
+</div></header>
+<main>
+<section class="panel">
+<div class="controls">
+<div class="field"><label for="mode">訓練模式</label>
+<select id="mode">
+<option value="copy">① 看圖拼排</option>
+<option value="memory">② 視覺工作記憶</option>
+<option value="rotate">③ 空間旋轉挑戰</option>
+<option value="error">④ 找錯與自我修正</option>
+</select></div>
+<div class="field"><label for="level">題目難度</label>
+<select id="level">
+<option value="0">第 1 題｜入門 2×2</option>
+<option value="1">第 2 題｜十字形</option>
+<option value="2">第 3 題｜階梯形</option>
+<option value="3">第 4 題｜小方框</option>
+<option value="4">第 5 題｜T 字組合</option>
+<option value="5">第 6 題｜不規則形</option>
+<option value="6">第 7 題｜大十字</option>
+<option value="7">第 8 題｜雙通道</option>
+<option value="8">第 9 題｜長路徑</option>
+<option value="9">第 10 題｜迷宮形</option>
+<option value="10">第 11 題｜高階組合</option>
+<option value="11">第 12 題｜挑戰題</option>
+</select></div>
+<button class="primary" id="newGame">重新出題</button>
+<button class="secondary" id="fontDown" aria-label="縮小圖卡">A−</button>
+<button class="secondary" id="fontUp" aria-label="放大圖卡">A＋</button>
+</div>
+<div class="chips">
+<span class="chip">視覺掃描</span><span class="chip">空間定位</span><span class="chip">圖形分析與組合</span><span class="chip">心智旋轉</span><span class="chip">工作記憶</span><span class="chip">規劃與監控</span>
+</div>
+<div class="instruction" id="modeHint">將下方箭頭圖卡拖曳到空格；也可以先點選圖卡，再點選目標格。放錯位置可再次移動。</div>
+<div class="statusline"><div class="status" id="status">準備開始！</div><div class="small" id="count">已放置 0 張</div></div>
+<div class="progress"><span id="progress"></span></div>
+</section>
+
+<section class="playarea">
+<div class="panel" id="modelPanel">
+<h2 id="modelTitle">範例卡</h2>
+<p class="small" id="modelDescription">觀察每張箭頭的方向與相對位置。</p>
+<div id="model" class="board-wrap"></div>
+<div class="actions">
+<button class="secondary" id="showModel">顯示／隱藏範例</button>
+<button class="warm hidden" id="startMemory">看 5 秒，開始記憶</button>
+</div>
+<div id="modelNotice" class="small" style="margin-top:8px"></div>
+</div>
+
+<div class="panel">
+<h2 id="boardTitle">你的拼圖區</h2>
+<p class="small" id="boardDescription">把每一張圖卡放進對應位置；完成後按「檢查答案」。</p>
+<div class="board-wrap"><div id="board" class="board" aria-label="拼圖操作區"></div></div>
+<div id="bankPanel">
+<h3>可使用的箭頭圖卡</h3>
+<p class="small">可拖曳；或點選一張，再點空格放置。選中圖卡後可旋轉方向。</p>
+<div id="bank" class="bank" aria-label="圖卡區"></div>
+</div>
+<div class="actions">
+<button class="secondary" id="rotateBtn">↻ 旋轉選中圖卡</button>
+<button class="secondary" id="returnBtn">放回圖卡區</button>
+<button class="primary" id="checkBtn">檢查答案</button>
+<button class="warm" id="hintBtn">給我一個提示</button>
+<button class="danger" id="resetBtn">清空重排</button>
+</div>
+<div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+</div>
+</section>
+
+<section class="panel">
+<h2>本題能力觀察</h2>
+<div class="skills">
+<div class="skill"><b>視覺空間定位</b><span>方向對不對？位置對不對？</span></div>
+<div class="skill"><b>視覺分析與組合</b><span>能否由局部線索拼出整體？</span></div>
+<div class="skill"><b>工作記憶</b><span>能否保留方向與位置資訊？</span></div>
+<div class="skill"><b>執行功能</b><span>有無先規劃、比對並修正？</span></div>
+</div>
+<p class="small" style="margin-bottom:0">教學觀察建議：記錄獨立完成、口語提示、手勢提示、示範提示各用了幾次；不要只記錄對錯，也觀察孩子採用的策略。</p>
+</section>
+</main>
+<script>
+const puzzles = [
+ {name:"入門 2×2",cells:[[0,0,"D"],[1,0,"L"],[0,1,"R"],[1,1,"U"]]},
+ {name:"十字形",cells:[[1,0,"U"],[0,1,"L"],[1,1,"V"],[2,1,"R"],[1,2,"D"]]},
+ {name:"階梯形",cells:[[0,0,"R"],[1,0,"U"],[1,1,"D"],[2,1,"L"],[2,2,"V"],[3,2,"R"]]},
+ {name:"小方框",cells:[[0,0,"H"],[1,0,"D"],[2,0,"L"],[0,1,"U"],[2,1,"V"],[0,2,"R"],[1,2,"U"],[2,2,"H"]]},
+ {name:"T 字組合",cells:[[0,0,"L"],[1,0,"H"],[2,0,"R"],[1,1,"U"],[1,2,"V"],[1,3,"D"]]},
+ {name:"不規則形",cells:[[1,0,"U"],[2,0,"D"],[0,1,"L"],[1,1,"H"],[2,1,"R"],[2,2,"U"],[3,2,"D"],[1,3,"V"]]},
+ {name:"大十字",cells:[[2,0,"U"],[2,1,"D"],[0,2,"L"],[1,2,"H"],[2,2,"V"],[3,2,"R"],[4,2,"L"],[2,3,"U"],[2,4,"D"]]},
+ {name:"雙通道",cells:[[0,0,"U"],[1,0,"D"],[2,0,"V"],[0,1,"V"],[2,1,"H"],[3,1,"R"],[0,2,"L"],[1,2,"U"],[2,2,"D"],[3,2,"V"]]},
+ {name:"長路徑",cells:[[0,0,"R"],[1,0,"H"],[2,0,"R"],[3,0,"D"],[3,1,"V"],[3,2,"L"],[2,2,"H"],[1,2,"L"],[0,2,"U"],[0,1,"V"]]},
+ {name:"迷宮形",cells:[[1,0,"U"],[2,0,"L"],[0,1,"D"],[1,1,"R"],[2,1,"H"],[3,1,"U"],[1,2,"V"],[3,2,"D"],[0,3,"R"],[1,3,"D"],[2,3,"L"],[3,3,"V"]]},
+ {name:"高階組合",cells:[[1,0,"L"],[2,0,"R"],[3,0,"U"],[0,1,"V"],[1,1,"D"],[2,1,"H"],[3,1,"V"],[1,2,"U"],[2,2,"L"],[3,2,"D"],[2,3,"H"]]},
+ {name:"挑戰題",cells:[[2,0,"U"],[0,1,"R"],[1,1,"H"],[2,1,"D"],[3,1,"L"],[0,2,"V"],[1,2,"U"],[2,2,"H"],[3,2,"V"],[1,3,"D"],[2,3,"R"],[3,3,"L"],[2,4,"V"]]}
+];
+const glyph={U:"↑",D:"↓",L:"←",R:"→",V:"↕",H:"↔"};
+const rotateMap={U:"R",R:"D",D:"L",L:"U",V:"H",H:"V"};
+const $=id=>document.getElementById(id);
+let mode="copy", level=0, solution=[], cells=[], pieces=[], placed={}, selected=null, dragged=null, feedbackShown=false, modelVisible=true, fontScale=1, memoryTimer=null, wrongSlots=[], memoryStarted=false;
+function rotateDir(d,n=1){for(let i=0;i<n;i++)d=rotateMap[d];return d}
+function normalizeCells(arr){
+ const minX=Math.min(...arr.map(c=>c.x)), minY=Math.min(...arr.map(c=>c.y));
+ return arr.map(c=>({...c,x:c.x-minX,y:c.y-minY}));
+}
+function rotatePattern(arr){
+ const maxY=Math.max(...arr.map(c=>c.y));
+ return normalizeCells(arr.map(c=>({...c,x:maxY-c.y,y:c.x,dir:rotateDir(c.dir)})));
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function setupGame(){
+ clearTimeout(memoryTimer);
+ mode=$("mode").value;level=Number($("level").value);
+ modelVisible = mode !== "memory";
+ const p=puzzles[level];
+ let raw=p.cells.map((c,i)=>({x:c[0],y:c[1],dir:c[2],slot:"s"+i}));
+ solution=normalizeCells(raw);
+ cells=mode==="rotate"?rotatePattern(solution):solution.map(c=>({...c}));
+ placed={};selected=null;dragged=null;feedbackShown=false;wrongSlots=[];memoryStarted=false;
+ pieces=shuffle(cells.map((c,i)=>({id:"p"+i,dir:c.dir,solutionDir:c.dir,solutionSlot:c.slot,slot:null})));
+ if(mode==="error"){
+   const ids=shuffle([...pieces.keys()]).slice(0,Math.min(2,Math.max(1,Math.floor(pieces.length/5))));
+   wrongSlots=ids.map(i=>pieces[i].solutionSlot);
+   ids.forEach((idx,j)=>{let piece=pieces[idx];piece.dir=rotateDir(piece.dir,j===0?1:2);piece.slot=piece.solutionSlot;placed[piece.slot]=piece.id});
+ }
+ renderAll();
+}
+function targetCells(){
+ return mode==="rotate"?solution:solution;
+}
+function boardDims(arr){return {cols:Math.max(...arr.map(c=>c.x))+1,rows:Math.max(...arr.map(c=>c.y))+1}}
+function renderModel(){
+ const model=$("model");model.innerHTML="";
+ const arr=solution;const {cols,rows}=boardDims(arr);
+ model.className="modelgrid";
+ model.style.gridTemplateColumns=`repeat(${cols},clamp(32px,4.6vw,47px))`;
+ model.style.gridTemplateRows=`repeat(${rows},clamp(32px,4.6vw,47px))`;
+ const byPos={};arr.forEach(c=>byPos[`${c.x},${c.y}`]=c);
+ for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+  const c=byPos[`${x},${y}`];const d=document.createElement("div");
+  d.className="modelcell"+(!c?" blank":"");
+  if(c)d.textContent=glyph[c.dir];
+  model.appendChild(d);
+ }
+ model.classList.toggle("hidden",!modelVisible);
+ $("modelTitle").textContent=mode==="rotate"?"原始範例（請在右側旋轉後重組）":mode==="memory"?"記憶範例":"範例卡";
+ $("modelDescription").textContent=mode==="rotate"?"觀察原圖，將整個圖形順時針旋轉 90° 後，再完成右側拼圖。":mode==="memory"?"看圖記住每張箭頭的方向與位置，再依記憶完成拼圖。":"觀察圖形輪廓、每張箭頭方向，以及彼此的相對位置。";
+ $("showModel").classList.remove("hidden");
+ $("startMemory").classList.toggle("hidden",mode!=="memory");
+ $("modelNotice").textContent=mode==="memory"?(memoryStarted?"範例已收起；需要時可按「顯示／隱藏範例」重新查看。":"準備好後按「看 5 秒，開始記憶」。"):"";
+}
+function renderBoard(){
+ const board=$("board");board.innerHTML="";
+ const {cols,rows}=boardDims(cells);
+ board.style.gridTemplateColumns=`repeat(${cols},var(--tile))`;
+ board.style.gridTemplateRows=`repeat(${rows},var(--tile))`;
+ const byPos={};cells.forEach(c=>byPos[`${c.x},${c.y}`]=c);
+ for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+  const c=byPos[`${x},${y}`];
+  const el=document.createElement("div");
+  if(!c){el.style.width="var(--tile)";el.style.height="var(--tile)";el.style.visibility="hidden";board.appendChild(el);continue}
+  el.className="cell"+(placed[c.slot]?" filled":"");
+  el.dataset.slot=c.slot;
+  el.setAttribute("aria-label",`第 ${y+1} 列第 ${x+1} 欄`);
+  if(placed[c.slot]){
+   const piece=pieces.find(p=>p.id===placed[c.slot]);
+   const t=makeTile(piece,false);
+   if(selected===piece.id)t.classList.add("selected");
+   if(feedbackShown){
+    const expected=expectedAt(c);
+    if(piece.dir===expected.dir)t.parentElement;
+    else el.classList.add("wrong");
+   }
+   el.appendChild(t);
+  }else{
+   const co=document.createElement("span");co.className="coord";co.textContent=`${y+1},${x+1}`;el.appendChild(co);
+  }
+  el.addEventListener("click",()=>handleCellClick(c.slot));
+  el.addEventListener("dragover",e=>{if(mode!=="error"){e.preventDefault();el.style.background="#e2f3ff"}});
+  el.addEventListener("dragleave",()=>{el.style.background=""});
+  el.addEventListener("drop",e=>{e.preventDefault();el.style.background="";if(mode!=="error")dropOnSlot(dragged,c.slot)});
+  board.appendChild(el);
+ }
+}
+function makeTile(piece,bankTile){
+ const t=document.createElement("button");t.type="button";t.className="tile"+(["H","V"].includes(piece.dir)?" double":"")+(selected===piece.id?" selected":"");
+ t.textContent=glyph[piece.dir];t.setAttribute("aria-label",`箭頭${piece.dir}，點選以選取`);
+ t.draggable=mode!=="error";
+ if(bankTile)t.classList.add("banktile");
+ t.addEventListener("click",e=>{e.stopPropagation();selected=piece.id;renderAll()});
+ t.addEventListener("dragstart",e=>{dragged=piece.id;e.dataTransfer.setData("text/plain",piece.id);e.dataTransfer.effectAllowed="move"});
+ return t;
+}
+function renderBank(){
+ const bank=$("bank");bank.innerHTML="";
+ const bankPieces=pieces.filter(p=>!p.slot);
+ bank.classList.toggle("empty",bankPieces.length===0);
+ if(mode==="error"){
+  $("bankPanel").classList.add("hidden");
+ }else{
+  $("bankPanel").classList.remove("hidden");
+  if(!bankPieces.length)bank.textContent="所有圖卡都已放置";
+  bankPieces.forEach(p=>bank.appendChild(makeTile(p,true)));
+  bank.ondragover=e=>{e.preventDefault();bank.style.background="#e8f5ff"};
+  bank.ondragleave=()=>{bank.style.background=""};
+  bank.ondrop=e=>{e.preventDefault();bank.style.background="";const id=e.dataTransfer.getData("text/plain")||dragged;if(id)returnToBank(id)};
+ }
+}
+function expectedAt(c){
+ const found=solution.find(s=>s.x===c.x&&s.y===c.y);
+ if(mode==="rotate"){
+   const tr=rotatePattern(solution);
+   return tr.find(s=>s.x===c.x&&s.y===c.y)||{dir:"?"};
+ }
+ return found||{dir:"?"};
+}
+function renderAll(){
+ renderModel();renderBoard();renderBank();updateStatus();
+ $("boardTitle").textContent=mode==="error"?"找錯區：點選箭頭再旋轉":"你的拼圖區";
+ $("boardDescription").textContent=mode==="rotate"?"請將左側圖形順時針旋轉 90°，再把圖卡放到右側空格。":"每張圖卡只能使用一次；完成後檢查方向與位置。";
+ $("modeHint").textContent={
+  copy:"將下方箭頭圖卡拖曳到空格；也可以先點選圖卡，再點選目標格。放錯位置可再次移動。",
+  memory:"先按「看 5 秒，開始記憶」。範例會自動收起；依記憶放置箭頭。可在完成前重新顯示範例。",
+  rotate:"觀察左側原圖，將整個圖形順時針旋轉 90°。右側格子輪廓已旋轉，請自行判斷箭頭方向及位置。",
+  error:"右側已放好圖卡，但其中有箭頭方向錯誤。點選錯誤圖卡，再按「旋轉選中圖卡」修正；不要急著逐張亂轉。"
+ }[mode];
+ $("rotateBtn").textContent=mode==="error"?"↻ 修正選中箭頭":"↻ 旋轉選中圖卡";
+ $("returnBtn").classList.toggle("hidden",mode==="error");
+ $("hintBtn").classList.toggle("hidden",mode==="error");
+ $("resetBtn").textContent=mode==="error"?"重新產生錯誤題":"清空重排";
+ $("feedback").className="feedback";
+}
+function updateStatus(){
+ const n=Object.keys(placed).length,total=cells.length;
+ $("count").textContent=`已放置 ${n} / ${total} 張`;
+ $("progress").style.width=`${n/total*100}%`;
+ $("status").textContent=selected?`已選取圖卡：${glyph[(pieces.find(p=>p.id===selected)||{}).dir]||""}。可旋轉或移動。`:"選取一張圖卡開始操作。";
+}
+function handleCellClick(slot){
+ if(mode==="error"){const id=placed[slot];if(id){selected=id;renderAll()}return}
+ if(!selected)return;
+ const p=pieces.find(x=>x.id===selected);if(!p)return;
+ const existing=placed[slot];
+ if(existing===selected){selected=null;renderAll();return}
+ if(existing){const old=pieces.find(x=>x.id===existing);if(old)old.slot=null}
+ if(p.slot)delete placed[p.slot];
+ p.slot=slot;placed[slot]=p.id;selected=null;feedbackShown=false;renderAll();
+}
+function dropOnSlot(id,slot){
+ if(!id)return;const p=pieces.find(x=>x.id===id);if(!p)return;
+ const existing=placed[slot];
+ if(existing&&existing!==id){const old=pieces.find(x=>x.id===existing);if(old)old.slot=null}
+ if(p.slot)delete placed[p.slot];
+ p.slot=slot;placed[slot]=id;selected=null;feedbackShown=false;renderAll();
+}
+function returnToBank(id){
+ if(mode==="error")return;
+ const p=pieces.find(x=>x.id===id);if(!p)return;
+ if(p.slot)delete placed[p.slot];p.slot=null;selected=null;feedbackShown=false;renderAll();
+}
+function rotateSelected(){
+ if(!selected){showFeedback("請先點選一張圖卡，再旋轉方向。","warn");return}
+ const p=pieces.find(x=>x.id===selected);if(!p)return;
+ p.dir=rotateDir(p.dir);feedbackShown=false;renderAll();
+}
+function checkAnswer(){
+ const total=cells.length,filled=Object.keys(placed).length;
+ let wrong=[];
+ cells.forEach(c=>{
+  const id=placed[c.slot];if(!id){wrong.push({slot:c.slot,empty:true});return}
+  const p=pieces.find(x=>x.id===id),expected=expectedAt(c);
+  if(!p||p.dir!==expected.dir)wrong.push({slot:c.slot,empty:false});
+ });
+ feedbackShown=true;renderBoard();
+ if(filled===total&&wrong.length===0){
+  showFeedback(`太棒了！${total} 張圖卡的位置與方向都正確。可以提高難度，或再挑戰記憶／旋轉模式。`,"good");
+  $("status").textContent="完成！全數正確。";
+ }else{
+  const empties=wrong.filter(x=>x.empty).length,errors=wrong.length-empties;
+  let msg=`目前還有 ${wrong.length} 個位置需要檢查。`;
+  if(empties)msg+=` 空格 ${empties} 個。`;
+  if(errors)msg+=` 方向錯誤 ${errors} 個（紅框）。`;
+  msg+=" 請先自行比對範例，再修正；不必急著重排全部圖卡。";
+  showFeedback(msg,"warn");
+ }
+}
+function showFeedback(msg,kind){const f=$("feedback");f.textContent=msg;f.className=`feedback show ${kind}`}
+function hint(){
+ if(mode==="memory"&&!modelVisible){showFeedback("記憶提示：先回想整體輪廓，再回想最上方／最左側的箭頭，最後補中間。也可暫時顯示範例。","warn");return}
+ const missing=cells.find(c=>!placed[c.slot]);
+ if(missing){showFeedback(`提示：先找出圖形最上方或最左側的定位點，再由這個位置向外排列。這題共有 ${cells.length} 張圖卡。`,"warn");return}
+ const wrong=cells.find(c=>{const p=pieces.find(x=>x.id===placed[c.slot]);return !p||p.dir!==expectedAt(c).dir});
+ if(wrong){showFeedback("提示：不要只看箭頭朝向，也要一起核對這張卡在整體圖形中的位置。","warn");return}
+ showFeedback("提示：所有位置看起來都已填滿。按「檢查答案」確認方向是否一致。","warn");
+}
+function resetBoard(){
+ clearTimeout(memoryTimer);
+ if(mode==="error"){setupGame();return}
+ placed={};pieces.forEach(p=>p.slot=null);selected=null;feedbackShown=false;renderAll();
+}
+$("mode").addEventListener("change",setupGame);
+$("level").addEventListener("change",setupGame);
+$("newGame").addEventListener("click",setupGame);
+$("rotateBtn").addEventListener("click",rotateSelected);
+$("returnBtn").addEventListener("click",()=>{if(selected)returnToBank(selected);else showFeedback("請先選取要放回的圖卡。","warn")});
+$("checkBtn").addEventListener("click",checkAnswer);
+$("hintBtn").addEventListener("click",hint);
+$("resetBtn").addEventListener("click",resetBoard);
+$("showModel").addEventListener("click",()=>{modelVisible=!modelVisible;renderModel()});
+$("startMemory").addEventListener("click",()=>{
+ clearTimeout(memoryTimer);modelVisible=true;memoryStarted=true;renderModel();
+ $("modelNotice").textContent="開始記憶！5 秒後範例自動收起。";
+ $("status").textContent="觀察箭頭方向、相對位置與整體輪廓。";
+ memoryTimer=setTimeout(()=>{modelVisible=false;renderModel();$("modelNotice").textContent="範例已收起，請依記憶完成拼圖。";$("status").textContent="記憶挑戰進行中。"},5000);
+});
+$("fontUp").addEventListener("click",()=>{fontScale=Math.min(1.35,fontScale+.1);document.documentElement.style.setProperty("--fontScale",fontScale);document.documentElement.style.setProperty("--tile",`${Math.round(68*(.85+fontScale*.15))}px`)});
+$("fontDown").addEventListener("click",()=>{fontScale=Math.max(.8,fontScale-.1);document.documentElement.style.setProperty("--fontScale",fontScale);document.documentElement.style.setProperty("--tile",`${Math.round(68*(.85+fontScale*.15))}px`)});
+setupGame();
+</script>
+</body>
+</html>
