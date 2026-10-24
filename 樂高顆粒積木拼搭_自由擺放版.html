@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>樂高顆粒積木拼搭練習</title>
+<style>
+:root{--ink:#153e48;--orange:#f15a2a;--line:#d8e4e0;--bg:#f3f7f5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Microsoft JhengHei",sans-serif}
+header{background:#fff;padding:15px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:clamp(21px,3vw,29px);margin:0}header p{margin:4px 0 0;color:#637a7d;font-size:14px}
+main{max-width:1500px;margin:auto;padding:14px;display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px}
+aside,.stage{background:#fff;border:1px solid var(--line);border-radius:16px;padding:13px;min-width:0}
+.stage{background:#e6f2fa}.tabs{display:flex;gap:6px;margin-bottom:12px}.tabs button{flex:1;background:#eaf2f1;color:#45646a}.tabs button.active{background:var(--ink);color:#fff}
+h2{font-size:17px;margin:0 0 10px}h3{font-size:14px;margin:14px 0 7px}
+button,select{font:inherit}button{border:0;border-radius:9px;padding:9px 11px;font-weight:750;cursor:pointer}
+button:focus-visible,select:focus-visible{outline:3px solid #ffc14b;outline-offset:2px}
+.primary{background:var(--orange);color:#fff}.secondary{background:#e4f1f2;color:var(--ink)}.outline{background:#fff;border:1px solid #c7d7d5;color:var(--ink)}
+.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.row>*{flex:1}
+select{width:100%;border:1px solid #c8d8d5;border-radius:9px;padding:9px;background:white;color:var(--ink)}
+.patterns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.pattern{padding:5px 3px;background:white;border:2px solid #e7ddcd;border-radius:12px;color:var(--ink);min-width:0}
+.pattern.active{border-color:var(--orange);box-shadow:0 0 0 2px #f15a2a22}
+.pattern svg{width:100%;display:block;aspect-ratio:1;background:#cdd3cd;border-radius:3px}
+.pattern b{display:block;font-size:12px;margin:4px 0 1px}
+label{display:block;font-size:13px;font-weight:750;margin:12px 0 6px}
+.small{font-size:12px;line-height:1.5;color:#61787b}.status{padding:10px;background:#f5f9f8;border:1px solid #dfe9e6;border-radius:10px;margin-top:10px;font-size:13px;line-height:1.5}
+.boards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.boardbox{background:#eaf4fb;border-radius:12px;padding:10px;min-width:0}
+.boardtitle{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:800;margin-bottom:8px}
+.board{display:block;width:100%;height:auto;max-height:74vh;touch-action:manipulation}
+.pieces{display:grid;gap:7px;max-height:230px;overflow:auto}
+.piece{display:flex;align-items:center;gap:9px;text-align:left;background:#fff;border:1px solid #dbe5e2;border-radius:10px;padding:7px}
+.piece.active{border:2px solid #087f8c;padding:6px}
+.brick-icon{width:60px;height:42px;flex-shrink:0}
+.note{font-size:12px;color:#60777a;line-height:1.55;margin-top:8px}
+.progress{height:8px;border-radius:20px;background:#dce7e6;overflow:hidden;margin:8px 0}.progress span{display:block;height:100%;width:0;background:#087f8c}
+.hidden{display:none!important}
+@media(max-width:900px){main{grid-template-columns:1fr}.boards{grid-template-columns:1fr}.board{max-width:560px;margin:auto;max-height:none}}
+</style>
+</head>
+<body>
+<header><div><h1>樂高顆粒積木拼搭</h1><p>觀察範例中的顆粒位置，選擇實際形狀的積木，再完成拼搭。</p></div><div class="row" style="margin:0;max-width:300px"><button class="secondary" id="restart">重新開始</button><button class="outline" id="toggleTarget">隱藏範例</button></div></header>
+<main>
+<aside>
+ <div class="tabs"><button class="active" data-tab="student">學生練習</button><button data-tab="teacher">老師設計</button></div>
+ <section id="studentPanel">
+  <h2>選擇一個圖案</h2><div class="patterns" id="patterns"></div>
+  <label for="mode">練習模式</label><select id="mode"><option value="guided">依步驟拼搭</option><option value="free">自由拼搭</option><option value="memory">記憶挑戰（隱藏範例）</option></select>
+  <h3>目前積木（立體顆粒）</h3><div class="pieces" id="pieces"></div>
+  <div class="row"><button class="secondary" id="rotate">旋轉積木 90°</button><button class="outline" id="undo">復原</button></div>
+  <div class="status"><b id="stepTitle">拼搭步驟</b><div id="stepText" class="small">請先選擇一個圖案。</div><div class="progress"><span id="progress"></span></div><div id="stepCount" class="small">0 / 0 塊完成</div></div>
+  <div class="row"><button class="outline" id="prev">上一步</button><button class="primary" id="next">下一步</button></div>
+  <div class="row"><button class="primary" id="check" style="width:100%">檢查答案</button></div>
+  <div class="status" id="feedback" aria-live="polite">選擇圖案後，按照指定積木的位置拼搭。</div>
+ </section>
+ <section id="teacherPanel" class="hidden">
+  <h2>老師自訂圖案</h2><p class="small">選擇顏色，再點擊左側目標棋盤的顆粒位置繪圖。完成後，系統會拆成不同尺寸的積木。</p>
+  <label>繪圖顏色</label><div class="row" id="colorChoices"></div>
+  <div class="row"><button class="outline" id="eraser">橡皮擦</button><button class="outline" id="clear">清空圖案</button></div>
+  <div class="row"><button class="primary" id="rebuild">重新拆解積木</button></div>
+  <div class="status" id="teacherStatus">可先選擇右側的範例，再進行修改。</div>
+ </section>
+</aside>
+<section class="stage">
+ <div class="boards">
+  <div class="boardbox"><div class="boardtitle"><span>目標範例</span><span id="targetName" class="small">小花</span></div><svg id="targetBoard" class="board" viewBox="0 0 520 520" aria-label="目標圖案"></svg><div class="note">灰色圓圈是底板顆粒位置；彩色積木呈現凸起圓柱顆粒。</div></div>
+  <div class="boardbox"><div class="boardtitle"><span>學生拼搭區</span><span id="buildCount" class="small">0 顆</span></div><svg id="buildBoard" class="board" viewBox="0 0 520 520" aria-label="學生拼搭區"></svg><div class="note">選擇左側積木，再點擊棋盤上的起始顆粒。每塊積木都有立體底座與圓形凸粒。</div></div>
+ </div>
+ <div class="status"><b>拼搭順序</b><div id="summary" class="small">選擇圖案後會顯示步驟。</div></div>
+</section>
+</main>
+<script>
+const COLORS={P:"#ed78b4",Y:"#f5ca35",G:"#42a653",R:"#e64335",B:"#3988d8",W:"#ffffff",O:"#f3a13a"};
+const COLOR_NAMES={P:"粉紅",Y:"黃色",G:"綠色",R:"紅色",B:"藍色",W:"白色",O:"橘色"};
+const PATTERNS=[
+{name:"愛心",rows:[".............","..RR...RR....",".RRRR.RRRR...",".RRRRRRRRRR..",".RRRRRRRRRR..","..RRRRRRRR...","...RRRRRR....","....RRRR.....",".....RR......",".............",".............",".............","............."]},
+{name:"笑臉",rows:[".............","....YYYYY....","..YYYYYYYYY..",".YYY.....YYY.",".YY..Y.Y..YY.",".YY..Y.Y..YY.",".YY.......YY.",".YYY..Y..YYY.","..YYYYYYYYY..","....YYYYY....",".............",".............","............."]},
+{name:"小花",rows:["......P......","....PPPPP....","...PPPPPPP...","...PPYYYPP...","..PPYYYYYPP..","..PPYYYYYPP..","...PPYYYPP...","....PPPPP....","......G......",".....GGG.....","....GGGGG....",".....GGG.....","......G......"]},
+{name:"房子",rows:[".....RRR.....","....RRRRR....","...RRRRRRR...","..RRRRRRRRR..",".RRRRRRRRRRR.",".RRRWWWWWRRR.",".RRRWWWWWRRR.",".RRRWWWWWRRR.",".RRRRRRRRRRR.","..RRRRRRRRR..","..GGGGGGGGG..","..GGGGGGGGG..","............."]},
+{name:"大樹",rows:["......G......",".....GGG.....","....GGGGG....","...GGGGGGG...","..GGGGGGGGG..",".GGGGGGGGGGG.","....GGGGG....",".....GGG.....","......G......","......G......",".....BBB.....",".....BBB.....","............."]},
+{name:"小魚",rows:[".............",".............",".....BB......","...BBBBBB....",".BBBBBBBBBB..","BBBBBBBBBBBB.","BBBBBBBBBB...",".BBBBBBBBBB..","...BBBBBB....",".....BB......",".............",".............","............."]},
+{name:"星星",rows:["......Y......","......Y......","..Y...Y...Y..","...Y..Y..Y...",".YYYYYYYYYYY.","..YYYYYYYYY..","...YYYYYYY...","....YYYYY....","...YY...YY...","..YY.....YY..",".YY.......YY.",".............","............."]},
+{name:"蘋果",rows:[".....RRR.....","....RRRRR....","...RRRRRRR...","..RRRRRRRRR..",".RRRRRRRRRRR.",".RRRRRRRRRRR.","RRRRRRRRRRRRR","RRRRRRRRRRRRR",".RRRRRRRRRRR.","..RRRRRRRRR..","...RRRRRRR...",".....GG......","............."]},
+{name:"西瓜",rows:[".............",".............","..GGGGGGGGG..",".GRRRRRRRRRG.",".GYYYYYYYYYG.",".GYYYYYYYYYG.",".GYYYYYYYYYG.",".GYYYYYYYYYG.","..GGGGGGGGG..",".............",".............",".............","............."]},
+{name:"太陽",rows:["......Y......","...O..Y..O...","....YYYYY....","..YYYYYYYYY..",".YYYYYYYYYYY.",".YYYYYYYYYYY.","YYYYYYYYYYYYY",".YYYYYYYYYYY.",".YYYYYYYYYYY.","..YYYYYYYYY..","....YYYYY....","...O..Y..O...","......Y......"]},
+{name:"蝴蝶",rows:["..P...P...P..",".PP...P...PP.",".PPP..P..PPP.","..PPP.P.PPP..","...PPPPPPP...","....PPPPP....","...PPPPPPP...","..PPP.P.PPP..",".PPP..P..PPP.",".PP...P...PP.","..P...P...P..","......P......","......P......"]},
+{name:"雨傘",rows:["....RRRRR....","..RRRRRRRRR..",".RRRRRRRRRRR.","RRRRRRRRRRRRR","RRRRRRRRRRRRR",".RRRRRRRRRRR.","..RRRRRRRRR..","....RRRRR....","......B......","......B......","......B......","......B......","............."]},
+{name:"冰淇淋",rows:["......P......",".....PPP.....","....PPPPP....","...PPPPPPP...","..PPPPPPPPP..","..WWWWWWWWW..","..WWWWWWWWW..","...WWWWWWW...","....WWWWW....",".....WWW.....","......W......","......W......","............."]},
+{name:"小雞",rows:[".....YYY.....","....YYYYY....","...YYYYYYY...","..YYYYYYYYY..","..YYOYYYOYY..","..YYYYYYYYY..","...YYYYYYY...","....YYYYY....",".....YYY.....","......Y......",".....OOO.....",".............","............."]},
+{name:"彩虹",rows:[".............",".............","...RRRRRRR...","..RYYYYYYYR..",".RYGGGGGGGYR.",".RYGBBBBBGYR.",".RYG.....GYR.",".RYG.....GYR.",".RYG.....GYR.",".RYGGGGGGGYR.","..RYYYYYYYR..","...RRRRRRR...","............."]}
+];
+const N=13,CELL=37,ORIGIN=20;
+let patternIndex=2,target=blank(),build=blank(),inventory=[],placedBricks=[],history=[],selectedType=null,rotated=false,hiddenTarget=false,activeTab="student",drawColor="P",eraseMode=false;
+const $=id=>document.getElementById(id);
+function blank(){return Array.from({length:N},()=>Array(N).fill("."))}
+function clone(v){return JSON.parse(JSON.stringify(v))}
+function dark(hex){let n=parseInt(hex.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;return "#"+[r,g,b].map(v=>Math.round(v*.62).toString(16).padStart(2,"0")).join("")}
+function parsePattern(p){let g=blank();p.rows.forEach((row,y)=>[...row].forEach((c,x)=>{if(y<N&&x<N&&COLORS[c])g[y][x]=c}));return g}
+function brickSVG(x,y,w,h,color){
+ const px=ORIGIN+x*CELL,py=ORIGIN+y*CELL,ww=w*CELL-3,hh=h*CELL-3,base=COLORS[color],shade=dark(base),studR=7.3;
+ let s=`<g><rect x="${px+1}" y="${py+5}" width="${ww}" height="${hh-3}" rx="3.5" fill="${shade}" stroke="${shade}" stroke-width="1"/>`;
+ s+=`<rect x="${px+1}" y="${py+2}" width="${ww}" height="${hh-4}" rx="3.5" fill="${base}" stroke="${shade}" stroke-width="1.2"/>`;
+ s+=`<path d="M${px+4},${py+4} H${px+ww-4}" stroke="#ffffff" stroke-opacity=".48" stroke-width="1.5"/>`;
+ for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
+  let cx=px+CELL*(xx+.5)-1.5,cy=py+CELL*(yy+.5)+1;
+  s+=`<ellipse cx="${cx}" cy="${cy+2.3}" rx="${studR+1}" ry="${studR*.82}" fill="${shade}"/>`;
+  s+=`<ellipse cx="${cx}" cy="${cy}" rx="${studR+1}" ry="${studR*.82}" fill="${base}" stroke="${shade}" stroke-width="1"/>`;
+  s+=`<ellipse cx="${cx-1}" cy="${cy-1.3}" rx="${studR*.65}" ry="${studR*.35}" fill="#ffffff" opacity=".32"/>`;
+ }
+ return s+"</g>"
+}
+function gridBase(){let s=`<rect x="1" y="1" width="518" height="518" rx="8" fill="#d9ded8" stroke="#89938d" stroke-width="2"/>`;for(let y=0;y<N;y++)for(let x=0;x<N;x++){let cx=ORIGIN+x*CELL+CELL/2-1,cy=ORIGIN+y*CELL+CELL/2-1;s+=`<circle cx="${cx}" cy="${cy}" r="10.5" fill="#d9ded8" stroke="#858e88" stroke-width="1.5"/>`}return s}
+function boardSVG(which){let s=gridBase();if(which==="target"){if(!(hiddenTarget&&activeTab==="student")){let work=clone(target);const pieces=decomposeTarget();pieces.forEach(p=>s+=brickSVG(p.x,p.y,p.w,p.h,p.color));}}else{placedBricks.forEach(p=>s+=brickSVG(p.x,p.y,p.w,p.h,p.color));if(selectedType&&activeTab==="student"){let p=inventory.find(q=>q.key===selectedType&&q.count>0);if(p){let w=rotated?p.h:p.w,h=rotated?p.w:p.h;}}}return s}
+function svgPos(e,svg){let p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
+function renderBoards(){$("targetBoard").innerHTML=boardSVG("target");$("buildBoard").innerHTML=boardSVG("build");$("targetName").textContent=activeTab==="teacher"?"自訂圖案":PATTERNS[patternIndex].name;$("buildCount").textContent=placedBricks.reduce((s,p)=>s+p.w*p.h,0)+" 顆";$("targetBoard").style.cursor=activeTab==="teacher"?"crosshair":"default";$("targetBoard").onclick=e=>{if(activeTab!=="teacher")return;let p=svgPos(e,$("targetBoard")),x=Math.round((p.x-ORIGIN-CELL/2+1)/CELL),y=Math.round((p.y-ORIGIN-CELL/2+1)/CELL);if(x>=0&&x<N&&y>=0&&y<N){target[y][x]=eraseMode?".":drawColor;makeInventory();renderBoards();renderInventory()}};$("buildBoard").onclick=e=>{if(activeTab!=="student")return;let p=svgPos(e,$("buildBoard")),x=Math.round((p.x-ORIGIN-CELL/2+1)/CELL),y=Math.round((p.y-ORIGIN-CELL/2+1)/CELL);if(x>=0&&x<N&&y>=0&&y<N)placeBrick(x,y)}}
+function renderPatternCards(){let el=$("patterns");el.innerHTML="";PATTERNS.forEach((p,i)=>{let b=document.createElement("button");b.className="pattern"+(i===patternIndex?" active":"");let art=`<svg viewBox="0 0 130 130"><rect width="130" height="130" fill="#cdd3cd"/>`;p.rows.forEach((row,y)=>[...row].forEach((c,x)=>{if(COLORS[c])art+=`<rect x="${x*9.3+4}" y="${y*9.3+4}" width="8.6" height="8.6" rx="1" fill="${COLORS[c]}" stroke="${dark(COLORS[c])}" stroke-width=".6"/>`}));b.innerHTML=art+`</svg><b>${p.name}</b>`;b.onclick=()=>{patternIndex=i;target=parsePattern(p);resetBuild();makeInventory();renderPatternCards();renderBoards();renderInventory();updateStatus(`已選擇「${p.name}」。積木不綁定目標位置，請自行判斷形狀與位置。`)};el.appendChild(b)})}
+function decomposeTarget(){let work=clone(target),arr=[],id=0;for(let y=0;y<N;y++)for(let x=0;x<N;x++){let c=work[y][x];if(c===".")continue;let found=null;for(let sh of [{w:2,h:2},{w:3,h:1},{w:1,h:3},{w:2,h:1},{w:1,h:2},{w:1,h:1}]){if(x+sh.w>N||y+sh.h>N)continue;let ok=true;for(let yy=y;yy<y+sh.h;yy++)for(let xx=x;xx<x+sh.w;xx++)if(work[yy][xx]!==c)ok=false;if(ok){found=sh;break}}if(found){arr.push({id:id++,color:c,x,y,w:found.w,h:found.h});for(let yy=y;yy<y+found.h;yy++)for(let xx=x;xx<x+found.w;xx++)work[yy][xx]="."}}for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(work[y][x]!=="."){arr.push({id:id++,color:work[y][x],x,y,w:1,h:1});work[y][x]="."}return arr}
+function makeInventory(){let counts={};decomposeTarget().forEach(p=>{let key=`${p.color}_${p.w}x${p.h}`;if(!counts[key])counts[key]={key,color:p.color,w:p.w,h:p.h,count:0};counts[key].count++});inventory=Object.values(counts);selectedType=inventory.find(p=>p.count>0)?.key||null}
+function resetBuild(){build=blank();placedBricks=[];history=[];rotated=false;hiddenTarget=false}
+function brickIcon(p){let w=58,h=40,scaleX=42/p.w,scaleY=25/p.h,ww=p.w*scaleX,hh=p.h*scaleY,base=COLORS[p.color],sh=dark(base);let s=`<svg class="brick-icon" viewBox="0 0 60 42"><polygon points="8,${13+hh} ${8+ww},${13+hh} ${16+ww},${8+hh} 16,${8+hh}" fill="${sh}"/><polygon points="8,13 16,8 ${16+ww},8 ${8+ww},13" fill="${base}" stroke="${sh}" stroke-width="1"/><rect x="8" y="13" width="${ww}" height="${hh}" fill="${base}" stroke="${sh}" stroke-width="1"/>`;for(let y=0;y<p.h;y++)for(let x=0;x<p.w;x++){let cx=8+(x+.5)*scaleX,cy=13+(y+.5)*scaleY;s+=`<ellipse cx="${cx}" cy="${cy+2}" rx="${Math.min(5,scaleX*.28)}" ry="${Math.min(4,scaleY*.26)}" fill="${sh}"/><ellipse cx="${cx}" cy="${cy}" rx="${Math.min(5,scaleX*.28)}" ry="${Math.min(4,scaleY*.26)}" fill="${base}" stroke="${sh}" stroke-width=".7"/>`}return s+"</svg>"}
+function renderInventory(){let el=$("pieces");el.innerHTML="";inventory.forEach(p=>{let b=document.createElement("button");b.className="piece"+(p.key===selectedType?" active":"");b.innerHTML=brickIcon(p)+`<span><b>${p.w}×${p.h} ${COLOR_NAMES[p.color]} × ${p.count}</b><br><span class="small">可放置於棋盤任意空位</span></span>`;b.onclick=()=>{selectedType=p.key;rotated=false;renderInventory();updateStatus(`已選擇 ${p.w}×${p.h} ${COLOR_NAMES[p.color]} 積木。請自行判斷放置位置。`)};el.appendChild(b)})}
+function placeBrick(x,y){let p=inventory.find(q=>q.key===selectedType&&q.count>0);if(!p){updateStatus("請先選擇一塊還有剩餘數量的積木。");return}let w=rotated?p.h:p.w,h=rotated?p.w:p.h;if(x+w>N||y+h>N){updateStatus("積木超出棋盤，請換一個起始位置或旋轉方向。");return}for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)if(build[yy][xx]!=="."){updateStatus("這個位置已有積木，請選擇其他空位。");return}history.push({build:clone(build),placed:clone(placedBricks),inventory:clone(inventory)});let brick={x,y,w,h,color:p.color,key:p.key};placedBricks.push(brick);for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)build[yy][xx]=p.color;p.count--;rotated=false;renderInventory();renderBoards();updateStatus("積木已放置。你可以自行選擇下一塊積木和位置，不會限制你照哪一種順序拼。")}
+function updateStatus(msg){$("feedback").textContent=msg;$("stepTitle").textContent="由學生自行規劃";$("stepText").textContent="積木可以放在任何空位；請自己決定下一步要用的形狀與位置。";let used=placedBricks.length,total=inventory.reduce((s,p)=>s+p.count,0)+used;$("stepCount").textContent=`已放置 ${used} 塊｜剩餘 ${total-used<0?0:inventory.reduce((s,p)=>s+p.count,0)} 塊`;$("progress").style.width=(used/(used+inventory.reduce((s,p)=>s+p.count,0)||1)*100)+"%";$("summary").textContent=placedBricks.length?placedBricks.map((p,i)=>`${i+1}. ${p.w}×${p.h} ${COLOR_NAMES[p.color]}（第${p.y+1}列第${p.x+1}欄）`).join("　／　"):"尚未放置積木。由學生自行決定拼搭順序。"}
+function renderColors(){let el=$("colorChoices");el.innerHTML="";Object.entries(COLORS).forEach(([k,v])=>{let b=document.createElement("button");b.style.background=v;b.style.height="32px";b.style.padding="0";b.style.border=drawColor===k?"3px solid #153e48":"2px solid white";b.onclick=()=>{drawColor=k;eraseMode=false;renderColors()};el.appendChild(b)})}
+function setTab(t){activeTab=t;document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===t));$("studentPanel").classList.toggle("hidden",t!=="student");$("teacherPanel").classList.toggle("hidden",t!=="teacher");renderBoards()}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+$("mode").onchange=()=>{hiddenTarget=$("mode").value==="memory";renderBoards();updateStatus(hiddenTarget?"記憶挑戰：範例已隱藏，請靠記憶安排積木。":"模式已切換；你可以自由決定積木形狀和位置。")};
+$("rotate").onclick=()=>{rotated=!rotated;updateStatus(rotated?"已選擇旋轉 90°。下一次放置時，積木的長寬會互換。":"積木方向已恢復。")};
+$("undo").onclick=()=>{let h=history.pop();if(!h)return;build=h.build;placedBricks=h.placed;inventory=h.inventory;renderInventory();renderBoards();updateStatus("已復原上一塊積木。")};
+$("restart").onclick=()=>{resetBuild();makeInventory();renderInventory();renderBoards();updateStatus("已重新開始。請自行決定使用哪一塊積木及放置位置。")};
+$("toggleTarget").onclick=()=>{hiddenTarget=!hiddenTarget;$("toggleTarget").textContent=hiddenTarget?"顯示範例":"隱藏範例";renderBoards()};
+$("check").onclick=()=>{let targetCount=target.flat().filter(c=>c!==".").length,correct=0,extra=0;for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(target[y][x]!=="."&&build[y][x]===target[y][x])correct++;if(build[y][x]!=="."&&target[y][x]===".")extra++}let placedCount=build.flat().filter(c=>c!==".").length;if(placedCount===targetCount&&correct===targetCount&&extra===0)updateStatus("完成！你用自己選擇的積木與拼搭順序，正確完成了圖案。");else updateStatus(`目前重疊正確 ${correct} 格；目標共 ${targetCount} 格，已放置 ${placedCount} 格。超出目標 ${extra} 格。可以繼續自行調整。`)};
+$("eraser").onclick=()=>{eraseMode=true;renderColors()};
+$("clear").onclick=()=>{target=blank();resetBuild();makeInventory();renderBoards();renderInventory();updateStatus("目標圖案已清空。")};
+$("rebuild").onclick=()=>{resetBuild();makeInventory();renderInventory();renderBoards();updateStatus("積木清單已重新整理。學生可以自行選擇形狀與位置，不會綁定預設步驟。")};
+function init(){target=parsePattern(PATTERNS[2]);makeInventory();renderPatternCards();renderColors();renderInventory();renderBoards();updateStatus("請選擇圖案。積木只提供形狀與數量，位置和拼搭順序由學生自行判斷。")}
+init();
+</script>
+</body></html>
